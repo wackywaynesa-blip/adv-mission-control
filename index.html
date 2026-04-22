@@ -647,6 +647,10 @@
             win.onload = () => { win.focus(); win.print(); };
         };
 
+        // Action Buttons
+        document.getElementById('fetchEleBtn').onclick = fetchElevation;
+        document.getElementById('scanWeatherBtn').onclick = fetchWeather;
+
         document.querySelectorAll('.config-group input').forEach(inp => inp.oninput = renderRoadbook);
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
