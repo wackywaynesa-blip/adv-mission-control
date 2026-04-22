@@ -1,0 +1,17 @@
+{
+  "name": "ADV Mission Control v2.0",
+  "short_name": "ADV Control",
+  "description": "Tactical Mission Control for ADV Rides",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#070708",
+  "theme_color": "#ff8c00",
+  "icons": [
+    {
+      "src": "https://cdn-icons-png.flaticon.com/512/854/854878.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
