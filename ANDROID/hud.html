@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>ADV TACTICAL HUD</title>
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#00ff00">
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --neon-green: #00ff00;
+            --neon-green-glow: rgba(0, 255, 0, 0.3);
+            --bg-black: #050505;
+            --panel-bg: rgba(15, 15, 15, 0.9);
+            --alert-red: #ff3333;
+        }
+
+        body, html {
+            margin: 0; padding: 0; height: 100%; width: 100%;
+            background-color: var(--bg-black); color: var(--neon-green);
+            font-family: 'JetBrains Mono', monospace; overflow: hidden;
+            text-transform: uppercase;
+        }
+
+        .hud-container {
+            display: grid;
+            grid-template-areas: 
+                "header header"
+                "speed speed"
+                "lean compass"
+                "data data"
+                "footer footer";
+            grid-template-rows: 40px 1.5fr 1fr 100px 40px;
+            height: 100vh; width: 100vw; box-sizing: border-box;
+            padding: 10px; gap: 10px;
+        }
+
+        .hud-block {
+            background: var(--panel-bg); border: 1px solid var(--neon-green);
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            box-shadow: inset 0 0 10px var(--neon-green-glow); border-radius: 4px;
+            position: relative; overflow: hidden;
+        }
+
+        /* Header & Footer */
+        .hud-header { grid-area: header; font-size: 0.8rem; letter-spacing: 2px; }
+        .hud-footer { grid-area: footer; font-size: 0.7rem; color: #888; }
+
+        /* Speedometer */
+        .speed-area { grid-area: speed; }
+        .speed-val { font-size: 8rem; font-weight: bold; line-height: 1; }
+        .speed-unit { font-size: 1.5rem; margin-top: -10px; opacity: 0.7; }
+
+        /* Lean Angle & Compass */
+        .lean-area { grid-area: lean; }
+        .compass-area { grid-area: compass; }
+        .small-val { font-size: 3rem; font-weight: bold; }
+        .small-label { font-size: 0.7rem; position: absolute; top: 5px; left: 10px; color: #888; }
+
+        /* Data HUD */
+        .data-area { 
+            grid-area: data; 
+            display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 5px;
+            border: none; background: transparent; box-shadow: none;
+        }
+        .data-item { background: var(--panel-bg); border: 1px solid #333; padding: 10px; border-radius: 4px; text-align: center; }
+        .data-val { font-size: 1.2rem; font-weight: bold; display: block; }
+        .data-label { font-size: 0.6rem; color: #666; }
+
+        /* Warning Overlay */
+        #warning-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(255, 0, 0, 0.2); display: none; align-items: center; justify-content: center;
+            font-size: 2rem; font-weight: bold; color: white; z-index: 9999;
+            pointer-events: none; animation: flash 0.5s infinite alternate;
+        }
+
+        @keyframes flash { from { opacity: 0; } to { opacity: 1; } }
+
+        /* Lean Visualizer */
+        .lean-visualizer {
+            width: 80%; height: 4px; background: #333; margin-top: 10px; position: relative;
+        }
+        #lean-dot {
+            width: 12px; height: 12px; background: var(--neon-green); border-radius: 50%;
+            position: absolute; top: -4px; left: 50%; transform: translateX(-50%);
+            transition: left 0.1s linear; box-shadow: 0 0 10px var(--neon-green);
+        }
+    </style>
+</head>
+<body>
+    <div id="warning-overlay">SENSORS OFFLINE</div>
+
+    <div class="hud-container">
+        <header class="hud-block hud-header">ADV TACTICAL HUD // SYSTEM ACTIVE</header>
+        
+        <div class="hud-block speed-area">
+            <span class="small-label">GROUND SPEED</span>
+            <div class="speed-val" id="speed">00</div>
+            <div class="speed-unit">KM/H</div>
+        </div>
+
+        <div class="hud-block lean-area">
+            <span class="small-label">ROLL / LEAN</span>
+            <div class="small-val" id="lean-val">0°</div>
+            <div class="lean-visualizer"><div id="lean-dot"></div></div>
+        </div>
+
+        <div class="hud-block compass-area">
+            <span class="small-label">HEADING</span>
+            <div class="small-val" id="heading">---</div>
+        </div>
+
+        <div class="data-area">
+            <div class="data-item">
+                <span class="data-val" id="alt">---</span>
+                <span class="data-label">ALTITUDE (M)</span>
+            </div>
+            <div class="data-item">
+                <span class="data-val" id="batt">--%</span>
+                <span class="data-label">BATT <span id="batt-stat"></span></span>
+            </div>
+            <div class="data-item">
+                <span class="data-val" id="sat">--</span>
+                <span class="data-label">SATELLITES</span>
+            </div>
+        </div>
+
+        <footer class="hud-block hud-footer">COORD: <span id="coords">WAITING FOR FIX...</span></footer>
+    </div>
+
+    <script>
+        // GPS & Speed Logic
+        if ("geolocation" in navigator) {
+            navigator.geolocation.watchPosition(
+                (pos) => {
+                    document.getElementById('warning-overlay').style.display = 'none';
+                    const speedKmh = pos.coords.speed ? (pos.coords.speed * 3.6).toFixed(0) : "00";
+                    document.getElementById('speed').textContent = speedKmh.toString().padStart(2, '0');
+                    document.getElementById('alt').textContent = pos.coords.altitude ? pos.coords.altitude.toFixed(0) : "---";
+                    document.getElementById('coords').textContent = `${pos.coords.latitude.toFixed(4)}, ${pos.coords.longitude.toFixed(4)}`;
+                    document.getElementById('sat').textContent = "FIX";
+                },
+                (err) => {
+                    document.getElementById('warning-overlay').style.display = 'flex';
+                    document.getElementById('warning-overlay').textContent = "GPS ERROR: " + err.message;
+                },
+                { enableHighAccuracy: true }
+            );
+        }
+
+        // Battery Logic
+        if ("getBattery" in navigator) {
+            navigator.getBattery().then(batt => {
+                const updateBatt = () => {
+                    document.getElementById('batt').textContent = Math.round(batt.level * 100) + "%";
+                    document.getElementById('batt-stat').textContent = batt.charging ? "⚡" : "";
+                };
+                updateBatt();
+                batt.addEventListener('levelchange', updateBatt);
+                batt.addEventListener('chargingchange', updateBatt);
+            });
+        }
+
+        // Lean Angle & Heading Logic
+        window.addEventListener('deviceorientation', (event) => {
+            // Lean (Roll)
+            if (event.gamma !== null) {
+                const roll = Math.round(event.gamma);
+                document.getElementById('lean-val').textContent = Math.abs(roll) + "°";
+                // Move the dot: Gamma is -90 to 90
+                const percent = ((roll + 90) / 180) * 100;
+                document.getElementById('lean-dot').style.left = percent + "%";
+            }
+
+            // Heading (Compass)
+            let heading = event.webkitCompassHeading || (360 - event.alpha);
+            if (heading) {
+                const directions = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'];
+                const index = Math.round(heading / 45) % 8;
+                document.getElementById('heading').textContent = directions[index] + " " + Math.round(heading) + "°";
+            }
+        });
+
+        // PWA Service Worker Registration
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./sw.js').then(reg => console.log('HUD SW REGISTERED'));
+            });
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,17 @@
+{
+  "name": "ADV Tactical HUD",
+  "short_name": "ADV HUD",
+  "description": "Tactical Handlebar Dashboard",
+  "start_url": "./hud.html",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#050505",
+  "theme_color": "#00ff00",
+  "icons": [
+    {
+      "src": "https://cdn-icons-png.flaticon.com/512/3553/3553457.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
