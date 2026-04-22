@@ -43,20 +43,21 @@
             position: relative; overflow: hidden;
         }
 
-        /* Header & Footer */
         .hud-header { grid-area: header; font-size: 0.8rem; letter-spacing: 2px; }
         .hud-footer { grid-area: footer; font-size: 0.7rem; color: #888; }
 
         /* Speedometer */
         .speed-area { grid-area: speed; }
-        .speed-val { font-size: 8rem; font-weight: bold; line-height: 1; }
+        .speed-val { font-size: 8rem; font-weight: bold; line-height: 1; text-shadow: 0 0 20px var(--neon-green-glow); }
         .speed-unit { font-size: 1.5rem; margin-top: -10px; opacity: 0.7; }
+        .max-speed-label { position: absolute; bottom: 10px; right: 15px; font-size: 0.7rem; color: #555; }
 
-        /* Lean Angle & Compass */
+        /* Lean & Compass */
         .lean-area { grid-area: lean; }
         .compass-area { grid-area: compass; }
         .small-val { font-size: 3rem; font-weight: bold; }
         .small-label { font-size: 0.7rem; position: absolute; top: 5px; left: 10px; color: #888; }
+        .peak-label { position: absolute; bottom: 5px; right: 10px; font-size: 0.5rem; color: #444; }
 
         /* Data HUD */
         .data-area { 
@@ -87,30 +88,45 @@
             position: absolute; top: -4px; left: 50%; transform: translateX(-50%);
             transition: left 0.1s linear; box-shadow: 0 0 10px var(--neon-green);
         }
+
+        /* G-Force Ball */
+        #g-meter {
+            width: 30px; height: 30px; border: 1px solid #333; border-radius: 50%;
+            position: absolute; top: 5px; right: 10px; overflow: hidden;
+        }
+        #g-ball {
+            width: 6px; height: 6px; background: var(--neon-green); border-radius: 50%;
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+        }
     </style>
 </head>
 <body>
     <div id="warning-overlay">SENSORS OFFLINE</div>
 
     <div class="hud-container">
-        <header class="hud-block hud-header">ADV TACTICAL HUD // SYSTEM ACTIVE</header>
+        <header class="hud-block hud-header">
+            ADV TACTICAL HUD // <span id="lock-status" style="color:#555">WAKE LOCK: OFF</span>
+        </header>
         
-        <div class="hud-block speed-area">
+        <div class="hud-block speed-area" onclick="resetMax()">
             <span class="small-label">GROUND SPEED</span>
             <div class="speed-val" id="speed">00</div>
             <div class="speed-unit">KM/H</div>
+            <div class="max-speed-label">MAX: <span id="max-speed">00</span></div>
+            <div id="g-meter"><div id="g-ball"></div></div>
         </div>
 
         <div class="hud-block lean-area">
             <span class="small-label">ROLL / LEAN</span>
             <div class="small-val" id="lean-val">0°</div>
             <div class="lean-visualizer"><div id="lean-dot"></div></div>
+            <div class="peak-label">PEAK: <span id="peak-lean">0</span>°</div>
         </div>
 
         <div class="hud-block compass-area">
             <span class="small-label">HEADING</span>
             <div class="small-val" id="heading">---</div>
-        </div>
+        </header>
 
         <div class="data-area">
             <div class="data-item">
@@ -131,13 +147,43 @@
     </div>
 
     <script>
+        let maxSpeed = 0;
+        let peakLean = 0;
+        let wakeLock = null;
+
+        // Wake Lock Functionality
+        async function requestWakeLock() {
+            try {
+                wakeLock = await navigator.wakeLock.request('screen');
+                document.getElementById('lock-status').textContent = "WAKE LOCK: ACTIVE";
+                document.getElementById('lock-status').style.color = "var(--neon-green)";
+            } catch (err) {
+                console.error(`${err.name}, ${err.message}`);
+            }
+        }
+
+        // Request lock on interaction
+        document.body.addEventListener('click', requestWakeLock, { once: true });
+
+        function resetMax() {
+            maxSpeed = 0; peakLean = 0;
+            document.getElementById('max-speed').textContent = "00";
+            document.getElementById('peak-lean').textContent = "0";
+        }
+
         // GPS & Speed Logic
         if ("geolocation" in navigator) {
             navigator.geolocation.watchPosition(
                 (pos) => {
                     document.getElementById('warning-overlay').style.display = 'none';
-                    const speedKmh = pos.coords.speed ? (pos.coords.speed * 3.6).toFixed(0) : "00";
-                    document.getElementById('speed').textContent = speedKmh.toString().padStart(2, '0');
+                    const speedKmh = pos.coords.speed ? (pos.coords.speed * 3.6) : 0;
+                    
+                    if (speedKmh > maxSpeed) {
+                        maxSpeed = speedKmh;
+                        document.getElementById('max-speed').textContent = Math.round(maxSpeed).toString().padStart(2, '0');
+                    }
+
+                    document.getElementById('speed').textContent = Math.round(speedKmh).toString().padStart(2, '0');
                     document.getElementById('alt').textContent = pos.coords.altitude ? pos.coords.altitude.toFixed(0) : "---";
                     document.getElementById('coords').textContent = `${pos.coords.latitude.toFixed(4)}, ${pos.coords.longitude.toFixed(4)}`;
                     document.getElementById('sat').textContent = "FIX";
@@ -168,7 +214,14 @@
             // Lean (Roll)
             if (event.gamma !== null) {
                 const roll = Math.round(event.gamma);
-                document.getElementById('lean-val').textContent = Math.abs(roll) + "°";
+                const absRoll = Math.abs(roll);
+                document.getElementById('lean-val').textContent = absRoll + "°";
+                
+                if (absRoll > peakLean) {
+                    peakLean = absRoll;
+                    document.getElementById('peak-lean').textContent = peakLean;
+                }
+
                 // Move the dot: Gamma is -90 to 90
                 const percent = ((roll + 90) / 180) * 100;
                 document.getElementById('lean-dot').style.left = percent + "%";
@@ -182,6 +235,19 @@
                 document.getElementById('heading').textContent = directions[index] + " " + Math.round(heading) + "°";
             }
         });
+
+        // Simple G-Meter logic via Accelerometer
+        if (window.DeviceMotionEvent) {
+            window.addEventListener('devicemotion', (event) => {
+                const acc = event.accelerationIncludingGravity;
+                if (acc) {
+                    // Normalize g-ball movement (clamped to 50%)
+                    const x = Math.max(-50, Math.min(50, (acc.x * 5)));
+                    const y = Math.max(-50, Math.min(50, (acc.y * 5)));
+                    document.getElementById('g-ball').style.transform = `translate(calc(-50% + ${-x}px), calc(-50% + ${y}px))`;
+                }
+            });
+        }
 
         // PWA Service Worker Registration
         if ('serviceWorker' in navigator) {
