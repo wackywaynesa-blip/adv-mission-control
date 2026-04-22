@@ -36,31 +36,59 @@
         }
 
         .system-status-bar {
-            height: 30px; background: #000; border-bottom: 1px solid var(--border-color);
-            display: flex; justify-content: space-between; align-items: center; padding: 0 20px;
+            height: 40px; background: #000; border-bottom: 1px solid var(--border-color);
+            display: flex; justify-content: space-between; align-items: center; padding: 0 15px;
             font-family: 'JetBrains Mono', monospace; font-size: 0.7rem; color: var(--accent-orange);
-            letter-spacing: 1px; z-index: 1000;
+            letter-spacing: 1px; z-index: 3000;
         }
 
+        .status-btn { cursor: pointer; padding: 5px 10px; border: 1px solid transparent; transition: all 0.3s; }
+        .status-btn:hover { border-color: var(--accent-orange); background: rgba(255, 140, 0, 0.1); }
+
         .dashboard {
-            display: flex; height: calc(100vh - 30px); width: 100vw;
+            display: flex; height: calc(100vh - 40px); width: 100vw;
             box-sizing: border-box;
             background: radial-gradient(circle at center, #111 0%, #070708 100%);
         }
 
         .side-panel {
-            width: 320px; background-color: var(--panel-bg); backdrop-filter: blur(10px);
+            width: 320px; background-color: var(--panel-bg); backdrop-filter: blur(15px);
             border: 1px solid var(--border-color); display: flex; flex-direction: column;
             padding: 25px; box-sizing: border-box; overflow-y: auto;
-            box-shadow: 0 0 30px rgba(0,0,0,0.5);
+            box-shadow: 0 0 30px rgba(0,0,0,0.5); z-index: 2000;
+            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         }
 
         #left-panel { border-right: 1px solid var(--border-color); }
         #right-panel { border-left: 1px solid var(--border-color); }
 
+        /* Mobile Responsive Overrides */
+        @media (max-width: 768px) {
+            .system-status-bar { font-size: 0.6rem; padding: 0 10px; }
+            #status-center { display: none; }
+            
+            .side-panel {
+                position: fixed;
+                top: 40px;
+                height: calc(100% - 40px);
+                width: 85%;
+                max-width: 320px;
+            }
+
+            #left-panel { left: 0; transform: translateX(-105%); }
+            #right-panel { right: 0; transform: translateX(105%); }
+
+            #left-panel.active { transform: translateX(0); }
+            #right-panel.active { transform: translateX(0); }
+
+            .main-map-area { width: 100%; height: 100%; }
+            #elevation-container { height: 120px; }
+        }
+
         .main-map-area {
             flex-grow: 1; background-color: #000; position: relative;
             border: 1px solid var(--border-color); display: flex; flex-direction: column;
+            z-index: 1;
         }
 
         #map { width: 100%; flex-grow: 1; background: #000; }
@@ -152,9 +180,13 @@
 </head>
 <body>
     <div class="system-status-bar">
-        <div id="status-left">SYSTEM: ACTIVE // TRK: NONE</div>
+        <div id="status-left" class="status-btn" onclick="togglePanel('left-panel')">☰ CONFIG</div>
         <div id="status-center">ADV MISSION CONTROL v2.0</div>
-        <div id="status-right">TOTAL DIST: 0.0 KM // UTC: <span id="clock">00:00:00</span></div>
+        <div id="status-right" class="status-btn" onclick="togglePanel('right-panel')">LOG ☰</div>
+    </div>
+    <div style="background: #000; color: var(--accent-orange); font-family: 'JetBrains Mono', monospace; font-size: 0.6rem; padding: 2px 10px; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between;">
+        <div id="sub-status-dist">DIST: 0.0 KM</div>
+        <div id="sub-status-clock">UTC: 00:00:00</div>
     </div>
 
     <div class="dashboard">
@@ -218,8 +250,15 @@
         // System Clock
         setInterval(() => {
             const now = new Date();
-            document.getElementById('clock').textContent = now.toTimeString().split(' ')[0];
+            document.getElementById('sub-status-clock').textContent = 'UTC: ' + now.toTimeString().split(' ')[0];
         }, 1000);
+
+        function togglePanel(id) {
+            const panel = document.getElementById(id);
+            const otherId = id === 'left-panel' ? 'right-panel' : 'left-panel';
+            document.getElementById(otherId).classList.remove('active');
+            panel.classList.toggle('active');
+        }
 
         // Map Initialization
         const map = L.map('map', { zoomControl: false, attributionControl: false }).setView([0, 0], 2);
@@ -261,8 +300,6 @@
 
         function processGPX(xmlText) {
             const gpx = new DOMParser().parseFromString(xmlText, "text/xml");
-            
-            // Extract Track Points
             const trkpts = Array.from(gpx.getElementsByTagName("trkpt"));
             const points = trkpts.map(p => [parseFloat(p.getAttribute("lat")), parseFloat(p.getAttribute("lon"))]);
             
@@ -275,7 +312,6 @@
                 return null;
             });
             
-            // Extract Stops (Waypoints or Routepoints)
             let stopElements = Array.from(gpx.getElementsByTagName("wpt"));
             if (stopElements.length === 0) stopElements = Array.from(gpx.getElementsByTagName("rtept"));
             
@@ -292,14 +328,10 @@
                 stops.push({ lat, lon, name, distance });
             });
 
-            // Update Map
             if (currentRoute) map.removeLayer(currentRoute);
             currentRoute = L.polyline(points, { color: 'var(--accent-orange)', weight: 3 }).addTo(map);
             map.fitBounds(currentRoute.getBounds(), { padding: [40, 40] });
 
-            document.getElementById('status-left').textContent = `SYSTEM: ACTIVE // TRK: ${document.getElementById('tripName').value || 'UNNAMED'}`;
-
-            // Elevation HUD logic (from GPX)
             const validEle = elevationData.filter(e => e !== null);
             if (validEle.length > 0) {
                 document.getElementById('elevation-container').style.display = 'block';
@@ -309,7 +341,6 @@
                 const labels = sampledEle.map((_, i) => (i * step * (totalDist / elevationData.length)).toFixed(1));
                 renderElevationChart(labels, sampledEle);
             }
-
             renderRoadbook();
         }
 
@@ -317,8 +348,6 @@
             if (!currentRoute) return alert("LOAD GPX FIRST.");
             const pts = currentRoute.getLatLngs();
             const totalDist = getTotalDist();
-            
-            // Open-Meteo limit is 100 locations per request
             const maxPoints = 100;
             const step = Math.max(1, Math.floor(pts.length / maxPoints));
             const sampled = pts.filter((_, i) => i % step === 0).slice(0, maxPoints);
@@ -330,15 +359,12 @@
 
             try {
                 const res = await fetch(`https://api.open-meteo.com/v1/elevation?latitude=${lats}&longitude=${lons}`);
-                if (!res.ok) throw new Error("API REJECTED SCAN.");
                 const data = await res.json();
                 if (data.elevation) {
                     document.getElementById('elevation-container').style.display = 'block';
                     const labels = data.elevation.map((_, i) => (i * step * (totalDist / pts.length)).toFixed(1));
                     renderElevationChart(labels, data.elevation);
                 }
-            } catch (err) {
-                alert("ELEVATION SCAN FAILED: " + err.message);
             } finally {
                 btn.textContent = originalText; btn.disabled = false;
             }
@@ -422,7 +448,6 @@
             list.innerHTML = ''; markerLayer.clearLayers(); stopMarkers = [];
             
             let totalKM = 0, dailyKM = 0, fuelKM = 0, currentDay = 1;
-            
             const startDate = document.getElementById('startDate').value;
             const startTime = timeToMinutes(document.getElementById('startTime').value);
             const fuelRange = parseFloat(document.getElementById('fuelRange').value) || 300;
@@ -437,7 +462,6 @@
             let currentTime = startTime;
             let bfastTaken = false, lunchTaken = false;
 
-            // Initial Day Header
             const firstHeader = document.createElement('div');
             firstHeader.className = 'day-header'; firstHeader.textContent = `DAY 01`;
             list.appendChild(firstHeader);
@@ -447,17 +471,11 @@
                 const nextLeg = stops[i+1]?.distance || 0;
                 let icons = [];
 
-                // Time calculation
                 currentTime += (stop.distance / avgSpeed) * 60;
-
-                // Meals
                 if (!bfastTaken && currentTime >= bfastTime) { currentTime += bfastDur; bfastTaken = true; icons.push('🍟'); }
                 if (!lunchTaken && currentTime >= lTime) { currentTime += lDur; lunchTaken = true; icons.push('🍔'); }
-
-                // Fuel
                 if (fuelKM + nextLeg >= fuelRange) { icons.push('⛽'); fuelKM = 0; currentTime += 10; }
                 
-                // Store Arrival for Weather
                 if (startDate) {
                     const arrival = new Date(startDate);
                     arrival.setDate(arrival.getDate() + (currentDay - 1));
@@ -465,11 +483,9 @@
                     stop.arrivalISO = arrival.toISOString();
                 }
 
-                // Day End
                 const isDayEnd = (dailyKM + nextLeg >= maxDaily) && stops[i+1];
                 if (isDayEnd) icons.push('⛺');
 
-                // Weather Hazards
                 let weatherHtml = '', isHazard = false;
                 if (stop.weather) {
                     const { temp, code, wind, gust, rain } = stop.weather;
@@ -514,10 +530,6 @@
             document.getElementById('sub-status-dist').textContent = `DIST: ${totalKM.toFixed(1)} KM`;
         }
 
-        // Action Buttons
-        document.getElementById('fetchEleBtn').onclick = fetchElevation;
-        document.getElementById('scanWeatherBtn').onclick = fetchWeather;
-        
         document.getElementById('saveTripBtn').onclick = () => {
             const data = {
                 config: {
@@ -562,14 +574,12 @@
 
         document.getElementById('printBtn').onclick = () => {
             if (stops.length === 0) return alert("LOAD GPX FIRST.");
-            
             const tripName = document.getElementById('tripName').value || "ADV MISSION";
             const startDate = document.getElementById('startDate').value;
             const startTime = timeToMinutes(document.getElementById('startTime').value);
             const avgSpeed = parseFloat(document.getElementById('avgSpeed').value) || 60;
             const maxDaily = parseFloat(document.getElementById('maxDaily').value) || 500;
             const fuelRange = parseFloat(document.getElementById('fuelRange').value) || 300;
-            
             const bfastTime = timeToMinutes(document.getElementById('breakfastTime').value);
             const bfastDur = parseInt(document.getElementById('breakfastDuration').value);
             const lTime = timeToMinutes(document.getElementById('lunchTime').value);
@@ -583,8 +593,8 @@
                 @page { size: A4; margin: 10mm; }
                 body { font-family: 'JetBrains Mono', monospace; background: white; color: black; }
                 .grid { display: flex; flex-direction: column; align-items: flex-start; gap: 0; background: white; }
-                .card { border: 1px solid black; box-sizing: border-box; width: 60mm; height: 30mm; padding: 1.5mm 3mm; display: flex; flex-direction: column; justify-content: center; page-break-inside: avoid; margin: 0; position: relative; }
-                .card.hazard { background: #f0f0f0; border-width: 2px; }
+                .card { border: 1px solid black; box-sizing: border-box; width: 60mm; height: 22.5mm; padding: 1mm 2mm; display: flex; flex-direction: column; justify-content: space-between; page-break-inside: avoid; margin: 0; position: relative; }
+                .card.hazard { background: #f0f0f0; border: 2px solid black; }
                 .day-title { width: 60mm; box-sizing: border-box; font-size: 1rem; font-weight: bold; border: 1px solid black; margin: 0; padding: 2px; background: #000; color: #fff; text-align: center; text-transform: uppercase; }
                 .card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1px; }
                 .card-time { font-size: 1.3rem; font-weight: bold; line-height: 1; }
@@ -599,30 +609,23 @@
                 totalKM += stop.distance; dailyKM += stop.distance; fuelKM += stop.distance;
                 const nextLeg = stops[i+1]?.distance || 0;
                 let icons = [];
-
                 currentTime += (stop.distance / avgSpeed) * 60;
                 if (!bfastTaken && currentTime >= bfastTime) { currentTime += bfastDur; bfastTaken = true; icons.push('🍟'); }
                 if (!lunchTaken && currentTime >= lTime) { currentTime += lDur; lunchTaken = true; icons.push('🍔'); }
                 if (fuelKM + nextLeg >= fuelRange) { icons.push('⛽'); fuelKM = 0; currentTime += 10; }
-                
                 const isDayEnd = (dailyKM + nextLeg >= maxDaily) && stops[i+1];
                 if (isDayEnd) icons.push('⛺');
-
-                let isHazard = false, weatherInfo = "";
+                let weatherInfo = "", isHazard = false;
                 if (stop.weather) {
-                    const { temp, code, wind, gust, rain } = stop.weather;
-                    if (rain > 1.0 || wind > 40 || gust > 60) isHazard = true;
+                    const { temp, code, wind, rain } = stop.weather;
+                    if (rain > 1.0 || wind > 40) isHazard = true;
                     weatherInfo = `<span>${getWeatherEmoji(code)} ${temp}°</span> <span>💨${wind}</span> <span>💧${rain}m</span>`;
                 }
-
-                // Clean Name: Try to get the town name from address (usually between first and second comma or first part)
                 let cleanName = stop.name;
                 if (stop.name.includes(',')) {
                     const parts = stop.name.split(',');
-                    // If first part has numbers (street), take second part (town)
                     cleanName = (/\d/.test(parts[0]) && parts[1]) ? parts[1].trim() : parts[0].trim();
                 }
-
                 printHtml += `
                 <div class="card ${isHazard ? 'hazard' : ''}">
                     <div class="card-header">
@@ -630,45 +633,24 @@
                         <div class="card-icons">${isHazard ? '⚠️' : ''}${icons.join('')}</div>
                     </div>
                     <div class="card-name">${cleanName}</div>
-                    <div class="card-dist">
-                        <span>+${stop.distance.toFixed(1)}</span>
-                        <span>Σ ${totalKM.toFixed(1)} KM</span>
-                    </div>
+                    <div class="card-dist"><span>+${stop.distance.toFixed(1)}</span><span>Σ ${totalKM.toFixed(1)} KM</span></div>
                     <div class="card-footer">${weatherInfo}</div>
                 </div>`;
-
                 if (isDayEnd) {
-                    currentDay++; dailyKM = 0; currentTime = startTime; 
-                    bfastTaken = false; lunchTaken = false;
+                    currentDay++; dailyKM = 0; currentTime = startTime; bfastTaken = false; lunchTaken = false;
                     printHtml += `<div class="day-title">DAY ${currentDay.toString().padStart(2,'0')}</div>`;
                 }
             });
-
             printHtml += `</div></body></html>`;
             const win = window.open('', '_blank');
-            win.document.write(printHtml);
-            win.document.close();
+            win.document.write(printHtml); win.document.close();
             win.onload = () => { win.focus(); win.print(); };
         };
 
-        // Auto-refresh on input
         document.querySelectorAll('.config-group input').forEach(inp => inp.oninput = renderRoadbook);
-
-        // PWA Service Worker Registration
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
-                navigator.serviceWorker.register('./sw.js')
-                    .then(reg => console.log('SW REGISTERED', reg))
-                    .catch(err => console.log('SW REG FAILED', err));
-            });
-        }
-    </script>
-</body>
-</html>
-stener('load', () => {
-                navigator.serviceWorker.register('./sw.js')
-                    .then(reg => console.log('SW REGISTERED', reg))
-                    .catch(err => console.log('SW REG FAILED', err));
+                navigator.serviceWorker.register('./sw.js').then(reg => console.log('SW REGISTERED')).catch(err => console.log('SW REG FAILED'));
             });
         }
     </script>
