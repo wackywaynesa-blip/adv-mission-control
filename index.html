@@ -491,6 +491,7 @@
                     map.flyTo([stop.lat, stop.lon], 14);
                     document.querySelectorAll('.emoji-marker').forEach(m => m.classList.remove('active-marker'));
                     document.getElementById(`marker-${i}`)?.classList.add('active-marker');
+                    if (window.innerWidth <= 768) document.getElementById('right-panel').classList.remove('active');
                 };
                 item.innerHTML = `
                     <div class="stop-info">
@@ -510,7 +511,7 @@
                     list.appendChild(header);
                 }
             });
-            document.getElementById('status-right').innerHTML = `TOTAL DIST: ${totalKM.toFixed(1)} KM // UTC: <span id="clock">${new Date().toTimeString().split(' ')[0]}</span>`;
+            document.getElementById('sub-status-dist').textContent = `DIST: ${totalKM.toFixed(1)} KM`;
         }
 
         // Action Buttons
@@ -656,6 +657,15 @@
         // PWA Service Worker Registration
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./sw.js')
+                    .then(reg => console.log('SW REGISTERED', reg))
+                    .catch(err => console.log('SW REG FAILED', err));
+            });
+        }
+    </script>
+</body>
+</html>
+stener('load', () => {
                 navigator.serviceWorker.register('./sw.js')
                     .then(reg => console.log('SW REGISTERED', reg))
                     .catch(err => console.log('SW REG FAILED', err));
