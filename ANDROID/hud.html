@@ -36,7 +36,7 @@
             font-size: 1.5rem; cursor: pointer; box-shadow: 0 0 15px var(--neon-green-glow);
         }
 
-        /* Default Portrait Grid */
+        /* Base Grid (Portrait) */
         .hud-container {
             display: grid;
             grid-template-areas: 
@@ -51,22 +51,26 @@
             padding: 10px; gap: 8px;
         }
 
-        /* Landscape Split-Screen Grid */
-        @media (orientation: landscape) {
-            .hud-container {
-                grid-template-areas: 
-                    "header header header"
-                    "speed lean pitch"
-                    "speed compass data"
-                    "footer footer footer";
-                grid-template-rows: 40px 1fr 1fr 30px;
-                grid-template-columns: 1.5fr 1fr 1fr;
-                padding: 5px; gap: 5px;
-            }
-            .speed-val { font-size: 6rem !important; }
-            .small-val { font-size: 1.8rem !important; }
-            .hud-header, .hud-footer { font-size: 0.6rem !important; }
+        /* Landscape Override (Triggered by Media Query OR .landscape class) */
+        @media (orientation: landscape) { body { --is-landscape: 1; } }
+        
+        body.landscape-mode .hud-container,
+        body[style*="--is-landscape: 1"] .hud-container {
+            grid-template-areas: 
+                "header header header"
+                "speed lean pitch"
+                "speed compass data"
+                "footer footer footer";
+            grid-template-rows: 40px 1fr 1fr 30px;
+            grid-template-columns: 1.5fr 1fr 1fr;
+            padding: 5px; gap: 5px;
         }
+
+        body.landscape-mode .speed-val, 
+        body[style*="--is-landscape: 1"] .speed-val { font-size: 6rem !important; }
+        
+        body.landscape-mode .small-val,
+        body[style*="--is-landscape: 1"] .small-val { font-size: 1.8rem !important; }
 
         .hud-block {
             background: var(--panel-bg); border: 1px solid var(--neon-green);
@@ -94,7 +98,7 @@
         @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
 
         .speed-area { grid-area: speed; }
-        .speed-val { font-size: 8rem; font-weight: bold; line-height: 1; text-shadow: 0 0 20px var(--neon-green-glow); transition: font-size 0.3s; }
+        .speed-val { font-size: 8rem; font-weight: bold; line-height: 1; text-shadow: 0 0 20px var(--neon-green-glow); }
         .speed-unit { font-size: 1.2rem; opacity: 0.7; }
         .max-speed-label { position: absolute; bottom: 5px; right: 10px; font-size: 0.6rem; color: #555; }
 
@@ -105,7 +109,7 @@
         .pitch-area { grid-area: pitch; }
         .compass-area { grid-area: compass; }
 
-        .small-val { font-size: 2.5rem; font-weight: bold; transition: font-size 0.3s; }
+        .small-val { font-size: 2.5rem; font-weight: bold; }
         .small-label { font-size: 0.5rem; position: absolute; top: 3px; left: 8px; color: #888; }
         .peak-label { position: absolute; bottom: 3px; right: 8px; font-size: 0.5rem; color: #444; }
 
@@ -141,7 +145,7 @@
 
     <div class="hud-container">
         <header class="hud-block hud-header">
-            <div>HUD v3.4 // <span id="lock-status" style="color:#555">WAKE LOCK: OFF</span></div>
+            <div>HUD v3.5 // <span id="lock-status" style="color:#555">WAKE LOCK: OFF</span></div>
             <div>
                 <button class="btn-action" id="map-btn" onclick="toggleMap()">MAP</button>
                 <button class="btn-action" onclick="calibrate()">CAL</button>
@@ -190,6 +194,19 @@
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
     <script>
+        // --- ORIENTATION TRACKER ---
+        function updateOrientation() {
+            const isLandscape = window.innerWidth > window.innerHeight;
+            if (isLandscape) {
+                document.body.classList.add('landscape-mode');
+            } else {
+                document.body.classList.remove('landscape-mode');
+            }
+            if (map && isMapActive) refreshMap();
+        }
+        window.addEventListener('resize', updateOrientation);
+        updateOrientation();
+
         // --- MATRIX MATH HELPERS ---
         function getRotationMatrix(alpha, beta, gamma) {
             const _x = beta * Math.PI / 180, _y = gamma * Math.PI / 180, _z = alpha * Math.PI / 180;
@@ -271,8 +288,6 @@
             }
         }
 
-        window.addEventListener('resize', refreshMap);
-
         function calibrate() {
             const mCurrent = getRotationMatrix(currentA, currentB, currentG);
             mCalibInv = transpose(mCurrent);
@@ -310,7 +325,7 @@
                 let finalR, finalP;
                 if (orient === 0) { finalR = rawR; finalP = rawP; }
                 else if (orient === 90) { finalR = -rawP; finalP = rawR; }
-                else if (orient === -90 || orient === 270) { finalR = rawP; finalP = -rawP; }
+                else if (orient === -90 || orient === 270) { finalR = rawP; finalP = -rawR; }
 
                 smoothRoll = (K * finalR) + ((1 - K) * smoothRoll);
                 smoothPitch = (K * finalP) + ((1 - K) * smoothPitch);
