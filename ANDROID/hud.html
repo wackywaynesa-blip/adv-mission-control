@@ -36,6 +36,7 @@
             font-size: 1.5rem; cursor: pointer; box-shadow: 0 0 15px var(--neon-green-glow);
         }
 
+        /* Default Portrait Grid */
         .hud-container {
             display: grid;
             grid-template-areas: 
@@ -47,7 +48,24 @@
             grid-template-rows: 50px 1.5fr 1fr 100px 40px;
             grid-template-columns: 1fr 1fr;
             height: 100vh; width: 100vw; box-sizing: border-box;
-            padding: 10px; gap: 10px;
+            padding: 10px; gap: 8px;
+        }
+
+        /* Landscape Split-Screen Grid */
+        @media (orientation: landscape) {
+            .hud-container {
+                grid-template-areas: 
+                    "header header header"
+                    "speed lean pitch"
+                    "speed compass data"
+                    "footer footer footer";
+                grid-template-rows: 40px 1fr 1fr 30px;
+                grid-template-columns: 1.5fr 1fr 1fr;
+                padding: 5px; gap: 5px;
+            }
+            .speed-val { font-size: 6rem !important; }
+            .small-val { font-size: 1.8rem !important; }
+            .hud-header, .hud-footer { font-size: 0.6rem !important; }
         }
 
         .hud-block {
@@ -76,25 +94,25 @@
         @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
 
         .speed-area { grid-area: speed; }
-        .speed-val { font-size: 8rem; font-weight: bold; line-height: 1; text-shadow: 0 0 20px var(--neon-green-glow); }
-        .speed-unit { font-size: 1.5rem; margin-top: -10px; opacity: 0.7; }
-        .max-speed-label { position: absolute; bottom: 10px; right: 15px; font-size: 0.7rem; color: #555; }
+        .speed-val { font-size: 8rem; font-weight: bold; line-height: 1; text-shadow: 0 0 20px var(--neon-green-glow); transition: font-size 0.3s; }
+        .speed-unit { font-size: 1.2rem; opacity: 0.7; }
+        .max-speed-label { position: absolute; bottom: 5px; right: 10px; font-size: 0.6rem; color: #555; }
 
         #map { width: 100%; height: 100%; position: absolute; top: 0; left: 0; z-index: 10; display: none; background: #000; }
-        #mini-speed { position: absolute; top: 10px; left: 10px; z-index: 20; background: rgba(0,0,0,0.8); padding: 5px 10px; border: 1px solid var(--neon-green); font-weight: bold; font-size: 1.2rem; display: none; }
+        #mini-speed { position: absolute; top: 10px; left: 10px; z-index: 20; background: rgba(0,0,0,0.8); padding: 5px 10px; border: 1px solid var(--neon-green); font-weight: bold; font-size: 1rem; display: none; }
 
         .lean-area { grid-area: lean; }
         .pitch-area { grid-area: pitch; }
         .compass-area { grid-area: compass; }
 
-        .small-val { font-size: 2.5rem; font-weight: bold; }
-        .small-label { font-size: 0.6rem; position: absolute; top: 5px; left: 10px; color: #888; }
-        .peak-label { position: absolute; bottom: 5px; right: 10px; font-size: 0.5rem; color: #444; }
+        .small-val { font-size: 2.5rem; font-weight: bold; transition: font-size 0.3s; }
+        .small-label { font-size: 0.5rem; position: absolute; top: 3px; left: 8px; color: #888; }
+        .peak-label { position: absolute; bottom: 3px; right: 8px; font-size: 0.5rem; color: #444; }
 
-        .data-area { grid-area: data; display: grid; grid-template-columns: 1fr 1fr; gap: 5px; border: none; background: transparent; box-shadow: none; }
-        .data-item { background: var(--panel-bg); border: 1px solid #333; padding: 5px; border-radius: 4px; text-align: center; display: flex; flex-direction: column; justify-content: center; }
-        .data-val { font-size: 1rem; font-weight: bold; display: block; }
-        .data-label { font-size: 0.5rem; color: #666; }
+        .data-area { grid-area: data; display: grid; grid-template-columns: 1fr 1fr; gap: 3px; border: none; background: transparent; box-shadow: none; }
+        .data-item { background: var(--panel-bg); border: 1px solid #333; padding: 2px; border-radius: 4px; text-align: center; display: flex; flex-direction: column; justify-content: center; }
+        .data-val { font-size: 0.8rem; font-weight: bold; display: block; }
+        .data-label { font-size: 0.4rem; color: #666; }
 
         #warning-overlay {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
@@ -103,13 +121,13 @@
             pointer-events: none; animation: flash 0.5s infinite alternate;
         }
 
-        .visualizer-h { width: 80%; height: 4px; background: #222; margin-top: 10px; position: relative; }
-        .visualizer-v { height: 50%; width: 4px; background: #222; position: absolute; right: 15px; top: 25%; }
-        #lean-dot { width: 10px; height: 10px; background: var(--neon-green); border-radius: 50%; position: absolute; top: -3px; left: 50%; transform: translateX(-50%); transition: left 0.1s linear; box-shadow: 0 0 10px var(--neon-green); }
-        #pitch-dot { width: 10px; height: 10px; background: var(--neon-green); border-radius: 50%; position: absolute; left: -3px; top: 50%; transform: translateY(-50%); transition: top 0.1s linear; box-shadow: 0 0 10px var(--neon-green); }
+        .visualizer-h { width: 70%; height: 3px; background: #222; margin-top: 5px; position: relative; }
+        .visualizer-v { height: 40%; width: 3px; background: #222; position: absolute; right: 10px; top: 30%; }
+        #lean-dot { width: 8px; height: 8px; background: var(--neon-green); border-radius: 50%; position: absolute; top: -3px; left: 50%; transform: translateX(-50%); transition: left 0.1s linear; box-shadow: 0 0 10px var(--neon-green); }
+        #pitch-dot { width: 8px; height: 8px; background: var(--neon-green); border-radius: 50%; position: absolute; left: -3px; top: 50%; transform: translateY(-50%); transition: top 0.1s linear; box-shadow: 0 0 10px var(--neon-green); }
 
-        #g-meter { width: 30px; height: 30px; border: 1px solid #333; border-radius: 50%; position: absolute; top: 5px; right: 10px; overflow: hidden; z-index: 21; }
-        #g-ball { width: 6px; height: 6px; background: var(--neon-green); border-radius: 50%; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); }
+        #g-meter { width: 25px; height: 25px; border: 1px solid #333; border-radius: 50%; position: absolute; top: 5px; right: 5px; overflow: hidden; z-index: 21; }
+        #g-ball { width: 4px; height: 4px; background: var(--neon-green); border-radius: 50%; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); }
     </style>
 </head>
 <body>
@@ -123,7 +141,7 @@
 
     <div class="hud-container">
         <header class="hud-block hud-header">
-            <div>HUD v3.3 // <span id="lock-status" style="color:#555">WAKE LOCK: OFF</span></div>
+            <div>HUD v3.4 // <span id="lock-status" style="color:#555">WAKE LOCK: OFF</span></div>
             <div>
                 <button class="btn-action" id="map-btn" onclick="toggleMap()">MAP</button>
                 <button class="btn-action" onclick="calibrate()">CAL</button>
@@ -174,12 +192,8 @@
     <script>
         // --- MATRIX MATH HELPERS ---
         function getRotationMatrix(alpha, beta, gamma) {
-            const _x = beta * Math.PI / 180;
-            const _y = gamma * Math.PI / 180;
-            const _z = alpha * Math.PI / 180;
-            const cX = Math.cos(_x), sX = Math.sin(_x);
-            const cY = Math.cos(_y), sY = Math.sin(_y);
-            const cZ = Math.cos(_z), sZ = Math.sin(_z);
+            const _x = beta * Math.PI / 180, _y = gamma * Math.PI / 180, _z = alpha * Math.PI / 180;
+            const cX = Math.cos(_x), sX = Math.sin(_x), cY = Math.cos(_y), sY = Math.sin(_y), cZ = Math.cos(_z), sZ = Math.sin(_z);
             return [
                 [cY * cZ - sX * sY * sZ, -cX * sZ, cZ * sY + cY * sX * sZ],
                 [cZ * sX * sY + cY * sZ, cX * cZ, sY * sZ - cY * cZ * sX],
@@ -191,21 +205,15 @@
             for(let i=0; i<3; i++) for(let j=0; j<3; j++) for(let k=0; k<3; k++) C[i][j] += A[i][k] * B[k][j];
             return C;
         }
-        function transpose(A) {
-            return [[A[0][0], A[1][0], A[2][0]], [A[0][1], A[1][1], A[2][1]], [A[0][2], A[1][2], A[2][2]]];
-        }
+        function transpose(A) { return [[A[0][0], A[1][0], A[2][0]], [A[0][1], A[1][1], A[2][1]], [A[0][2], A[1][2], A[2][2]]]; }
 
         // --- CORE STATE ---
         let maxSpeed = 0, peakLean = 0, peakPitch = 0, wakeLock = null;
         let isRecording = false, sessionData = [], isMapActive = false, map = null, marker = null;
-        
-        // Calibration
         let mCalibInv = JSON.parse(localStorage.getItem('mCalibInv')) || [[1,0,0],[0,1,0],[0,0,1]];
         let currentA = 0, currentB = 0, currentG = 0;
-        
-        // Smoothing (Low-pass)
         let smoothRoll = 0, smoothPitch = 0;
-        const K = 0.15; // Smoothing factor (lower = smoother/slower)
+        const K = 0.15;
 
         function updateClock() {
             const now = new Date();
@@ -235,21 +243,13 @@
             }
         }
 
-        function calibrate() {
-            const mCurrent = getRotationMatrix(currentA, currentB, currentG);
-            mCalibInv = transpose(mCurrent); // Inverse of rotation matrix is its transpose
-            localStorage.setItem('mCalibInv', JSON.stringify(mCalibInv));
-            resetMax();
-            alert("ZEROED TO CURRENT MOUNT POSITION");
-        }
-
         function toggleMap() {
             isMapActive = !isMapActive;
             const mapDiv = document.getElementById('map'), miniSpeed = document.getElementById('mini-speed'), mapBtn = document.getElementById('map-btn');
             if (isMapActive) {
                 mapDiv.style.display = 'block'; miniSpeed.style.display = 'block'; mapBtn.classList.add('active');
                 if (!map) initMap();
-                setTimeout(() => { map.invalidateSize(); if (marker) map.setView(marker.getLatLng(), 15); }, 100);
+                refreshMap();
             } else {
                 mapDiv.style.display = 'none'; miniSpeed.style.display = 'none'; mapBtn.classList.remove('active');
             }
@@ -258,8 +258,27 @@
         function initMap() {
             map = L.map('map', { zoomControl: false, attributionControl: true }).setView([0, 0], 15);
             L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', { attribution: '&copy; CARTO' }).addTo(map);
-            const neonIcon = L.divIcon({ className: 'custom-div-icon', html: "<div style='background-color:var(--neon-green); width:12px; height:12px; border-radius:50%; border:2px solid white; box-shadow:0 0 10px var(--neon-green)'></div>", iconSize: [12, 12], iconAnchor: [6, 6] });
+            const neonIcon = L.divIcon({ className: 'custom-div-icon', html: "<div style='background-color:var(--neon-green); width:10px; height:10px; border-radius:50%; border:2px solid white; box-shadow:0 0 10px var(--neon-green)'></div>", iconSize: [10, 10], iconAnchor: [5, 5] });
             marker = L.marker([0, 0], { icon: neonIcon }).addTo(map);
+        }
+
+        function refreshMap() {
+            if (map && isMapActive) {
+                setTimeout(() => { 
+                    map.invalidateSize(); 
+                    if (marker) map.setView(marker.getLatLng());
+                }, 200);
+            }
+        }
+
+        window.addEventListener('resize', refreshMap);
+
+        function calibrate() {
+            const mCurrent = getRotationMatrix(currentA, currentB, currentG);
+            mCalibInv = transpose(mCurrent);
+            localStorage.setItem('mCalibInv', JSON.stringify(mCalibInv));
+            resetMax();
+            alert("ZEROED");
         }
 
         function startGPS() {
@@ -283,26 +302,19 @@
             window.addEventListener('deviceorientation', (event) => {
                 currentA = event.alpha; currentB = event.beta; currentG = event.gamma;
                 const mCurrent = getRotationMatrix(currentA, currentB, currentG);
-                
-                // Relative Rotation = Current * Inverse(Calibrated)
                 const mRel = multiply(mCurrent, mCalibInv);
-
-                // Extract Roll/Pitch from Relative Matrix (Z-X-Y convention)
                 let rawR = Math.atan2(-mRel[2][0], mRel[2][2]) * 180 / Math.PI;
                 let rawP = Math.asin(Math.max(-1, Math.min(1, mRel[2][1]))) * 180 / Math.PI;
 
-                // Orientation Adjustment
                 const orient = window.orientation || (screen.orientation && screen.orientation.angle) || 0;
                 let finalR, finalP;
                 if (orient === 0) { finalR = rawR; finalP = rawP; }
                 else if (orient === 90) { finalR = -rawP; finalP = rawR; }
-                else if (orient === -90 || orient === 270) { finalR = rawP; finalP = -rawR; }
+                else if (orient === -90 || orient === 270) { finalR = rawP; finalP = -rawP; }
 
-                // Apply Smoothing
                 smoothRoll = (K * finalR) + ((1 - K) * smoothRoll);
                 smoothPitch = (K * finalP) + ((1 - K) * smoothPitch);
 
-                // Update UI
                 const absR = Math.abs(Math.round(smoothRoll));
                 document.getElementById('lean-val').textContent = absR + "°";
                 if (absR > peakLean) { peakLean = absR; document.getElementById('peak-lean').textContent = peakLean; }
