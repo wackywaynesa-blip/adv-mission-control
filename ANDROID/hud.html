@@ -57,10 +57,7 @@
             padding-bottom: max(8px, env(safe-area-inset-bottom));
         }
 
-        @media (orientation: landscape) { body { --is-landscape: 1; } }
-        
-        body.landscape-mode .hud-container,
-        body[style*="--is-landscape: 1"] .hud-container {
+        body.landscape-mode .hud-container {
             grid-template-areas: 
                 "header header header"
                 "speed lean pitch"
@@ -71,11 +68,8 @@
             padding: 5px; gap: 5px; height: 96dvh;
         }
 
-        body.landscape-mode .speed-val, 
-        body[style*="--is-landscape: 1"] .speed-val { font-size: 5rem !important; }
-        
-        body.landscape-mode .small-val,
-        body[style*="--is-landscape: 1"] .small-val { font-size: 1.6rem !important; }
+        body.landscape-mode .speed-val { font-size: 5rem !important; }
+        body.landscape-mode .small-val { font-size: 1.6rem !important; }
 
         .hud-block {
             background: var(--panel-bg); border: 1px solid var(--neon-green);
@@ -125,9 +119,9 @@
 
         #warning-overlay {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(255, 0, 0, 0.2); display: none; align-items: center; justify-content: center;
-            font-size: 1.5rem; font-weight: bold; color: white; z-index: 9999;
-            pointer-events: none; animation: flash 0.5s infinite alternate;
+            background: rgba(255, 0, 0, 0.4); display: none; align-items: center; justify-content: center;
+            font-size: 1.2rem; font-weight: bold; color: white; z-index: 9999;
+            pointer-events: none; text-align: center; padding: 20px;
         }
 
         .visualizer-h { width: 70%; height: 3px; background: #222; margin-top: 5px; position: relative; }
@@ -143,14 +137,14 @@
     <div id="start-overlay">
         <h1 style="margin-bottom: 20px; letter-spacing: 5px;">SYSTEMS STANDBY</h1>
         <button id="start-button" onclick="initializeSystems()">INITIALIZE HUD</button>
-        <p style="margin-top: 20px; font-size: 0.6rem; color: #555;">TOUCH TO START SENSORS & HUD</p>
+        <p style="margin-top: 20px; font-size: 0.6rem; color: #555;">v3.8 // TOUCH TO START</p>
     </div>
 
     <div id="warning-overlay">SENSORS OFFLINE</div>
 
     <div class="hud-container">
         <header class="hud-block hud-header">
-            <div>HUD v3.7 // <span id="lock-status" style="color:#555">WAKE LOCK: OFF</span></div>
+            <div>HUD v3.8 // <span id="lock-status" style="color:#555">WAKE LOCK: OFF</span></div>
             <div style="display:flex; gap:4px">
                 <button class="btn-action" onclick="toggleFS()">FULL</button>
                 <button class="btn-action" id="map-btn" onclick="toggleMap()">MAP</button>
@@ -185,55 +179,24 @@
 
         <div class="hud-block compass-area">
             <span class="small-label">HEADING</span>
-            <div class="small-val" id="heading" style="font-size: 1.5rem;">---</div>
+            <div class="small-val" id="heading" style="font-size: 1.2rem;">---</div>
         </div>
 
         <div class="data-area">
             <div class="data-item"><span class="data-val" id="alt">---</span><span class="data-label">ALTITUDE</span></div>
             <div class="data-item"><span class="data-val" id="batt">--%</span><span class="data-label">BATT <span id="batt-stat"></span></span></div>
             <div class="data-item"><span class="data-val" id="sat">--</span><span class="data-label">SATELLITES</span></div>
-            <div class="data-item"><span class="data-val" id="time">00:00</span><span class="data-label">SYSTEM CLOCK</span></div>
+            <div class="data-item"><span class="data-val" id="time">00:00</span><span class="data-label">CLOCK</span></div>
         </div>
 
-        <footer class="hud-block hud-footer">COORD: <span id="coords">WAITING FOR FIX...</span></footer>
+        <footer class="hud-block hud-footer">COORD: <span id="coords">WAITING...</span></footer>
     </div>
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
     <script>
-        // --- FULLSCREEN LOGIC ---
-        function toggleFS() {
-            if (!document.fullscreenElement && !document.webkitFullscreenElement) {
-                if (document.documentElement.requestFullscreen) {
-                    document.documentElement.requestFullscreen();
-                } else if (document.documentElement.webkitRequestFullscreen) {
-                    document.documentElement.webkitRequestFullscreen();
-                }
-            } else {
-                if (document.exitFullscreen) {
-                    document.exitFullscreen();
-                } else if (document.webkitExitFullscreen) {
-                    document.webkitExitFullscreen();
-                }
-            }
-        }
-
-        // --- ORIENTATION TRACKER ---
-        function updateOrientation() {
-            const isLandscape = window.innerWidth > window.innerHeight;
-            if (isLandscape) {
-                document.body.classList.add('landscape-mode');
-            } else {
-                document.body.classList.remove('landscape-mode');
-            }
-            if (map && isMapActive) refreshMap();
-            window.scrollTo(0, 1);
-        }
-        window.addEventListener('resize', updateOrientation);
-        updateOrientation();
-
-        // --- MATRIX MATH HELPERS ---
+        // --- UTILS ---
         function getRotationMatrix(alpha, beta, gamma) {
-            const _x = beta * Math.PI / 180, _y = gamma * Math.PI / 180, _z = alpha * Math.PI / 180;
+            const _x = (beta || 0) * Math.PI / 180, _y = (gamma || 0) * Math.PI / 180, _z = (alpha || 0) * Math.PI / 180;
             const cX = Math.cos(_x), sX = Math.sin(_x), cY = Math.cos(_y), sY = Math.sin(_y), cZ = Math.cos(_z), sZ = Math.sin(_z);
             return [[cY*cZ-sX*sY*sZ, -cX*sZ, cZ*sY+cY*sX*sZ], [cZ*sX*sY+cY*sZ, cX*cZ, sY*sZ-cY*cZ*sX], [-cX*sY, sX, cX*cY]];
         }
@@ -244,29 +207,48 @@
         }
         function transpose(A) { return [[A[0][0], A[1][0], A[2][0]], [A[0][1], A[1][1], A[2][1]], [A[0][2], A[1][2], A[2][2]]]; }
 
-        // --- CORE STATE ---
+        // --- STATE ---
         let maxSpeed = 0, peakLean = 0, peakPitch = 0, wakeLock = null;
         let isRecording = false, sessionData = [], isMapActive = false, map = null, marker = null;
-        let mCalibInv = JSON.parse(localStorage.getItem('mCalibInv')) || [[1,0,0],[0,1,0],[0,0,1]];
         let currentA=0, currentB=0, currentG=0, smoothRoll=0, smoothPitch=0;
         const K = 0.15;
+        
+        let mCalibInv = [[1,0,0],[0,1,0],[0,0,1]];
+        try { 
+            let saved = localStorage.getItem('mCalibInv');
+            if (saved) mCalibInv = JSON.parse(saved);
+        } catch(e) { console.error("Calib Load Error", e); }
 
+        // --- CORE FUNCTIONS ---
         function updateClock() {
             const now = new Date();
             document.getElementById('time').textContent = now.getHours().toString().padStart(2, '0') + ":" + now.getMinutes().toString().padStart(2, '0');
         }
         setInterval(updateClock, 1000);
 
+        function updateOrientationUI() {
+            const isLandscape = window.innerWidth > window.innerHeight;
+            document.body.classList.toggle('landscape-mode', isLandscape);
+            if (map && isMapActive) {
+                setTimeout(() => { map.invalidateSize(); if (marker) map.setView(marker.getLatLng()); }, 300);
+            }
+        }
+        window.addEventListener('resize', updateOrientationUI);
+
         async function initializeSystems() {
-            await requestWakeLock();
+            document.getElementById('start-overlay').style.display = 'none';
+            updateOrientationUI();
+            
+            // Try Sensors
             if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
                 try {
                     const permission = await DeviceOrientationEvent.requestPermission();
                     if (permission === 'granted') startSensors();
                 } catch (err) { console.error(err); }
             } else { startSensors(); }
+            
             startGPS();
-            document.getElementById('start-overlay').style.display = 'none';
+            requestWakeLock();
             window.scrollTo(0, 1);
         }
 
@@ -276,7 +258,18 @@
                     wakeLock = await navigator.wakeLock.request('screen');
                     document.getElementById('lock-status').textContent = "WAKE LOCK: ACTIVE";
                     document.getElementById('lock-status').style.color = "var(--neon-green)";
-                } catch (err) {}
+                } catch (err) { console.warn("WakeLock Error", err); }
+            }
+        }
+
+        function toggleFS() {
+            const doc = document.documentElement;
+            if (!document.fullscreenElement && !document.webkitFullscreenElement) {
+                if (doc.requestFullscreen) doc.requestFullscreen();
+                else if (doc.webkitRequestFullscreen) doc.webkitRequestFullscreen();
+            } else {
+                if (document.exitFullscreen) document.exitFullscreen();
+                else if (document.webkitExitFullscreen) document.webkitExitFullscreen();
             }
         }
 
@@ -285,20 +278,14 @@
             const mapDiv = document.getElementById('map'), miniSpeed = document.getElementById('mini-speed'), mapBtn = document.getElementById('map-btn');
             if (isMapActive) {
                 mapDiv.style.display = 'block'; miniSpeed.style.display = 'block'; mapBtn.classList.add('active');
-                if (!map) initMap();
-                refreshMap();
+                if (!map) {
+                    map = L.map('map', { zoomControl: false, attributionControl: false }).setView([0, 0], 15);
+                    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {}).addTo(map);
+                    const neonIcon = L.divIcon({ className: 'custom-div-icon', html: "<div style='background-color:var(--neon-green); width:8px; height:8px; border-radius:50%; border:1px solid white; box-shadow:0 0 8px var(--neon-green)'></div>", iconSize: [8, 8], iconAnchor: [4, 4] });
+                    marker = L.marker([0, 0], { icon: neonIcon }).addTo(map);
+                }
+                setTimeout(() => { map.invalidateSize(); if (marker) map.setView(marker.getLatLng()); }, 200);
             } else { mapDiv.style.display = 'none'; miniSpeed.style.display = 'none'; mapBtn.classList.remove('active'); }
-        }
-
-        function initMap() {
-            map = L.map('map', { zoomControl: false, attributionControl: false }).setView([0, 0], 15);
-            L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {}).addTo(map);
-            const neonIcon = L.divIcon({ className: 'custom-div-icon', html: "<div style='background-color:var(--neon-green); width:8px; height:8px; border-radius:50%; border:1px solid white; box-shadow:0 0 8px var(--neon-green)'></div>", iconSize: [8, 8], iconAnchor: [4, 4] });
-            marker = L.marker([0, 0], { icon: neonIcon }).addTo(map);
-        }
-
-        function refreshMap() {
-            if (map && isMapActive) { setTimeout(() => { map.invalidateSize(); if (marker) map.setView(marker.getLatLng()); }, 200); }
         }
 
         function calibrate() {
@@ -306,7 +293,7 @@
             mCalibInv = transpose(mCurrent);
             localStorage.setItem('mCalibInv', JSON.stringify(mCalibInv));
             resetMax();
-            alert("ZEROED");
+            alert("SENSORS ZEROED");
         }
 
         function startGPS() {
@@ -314,41 +301,55 @@
                 navigator.geolocation.watchPosition((pos) => {
                     document.getElementById('warning-overlay').style.display = 'none';
                     const speedKmh = pos.coords.speed ? (pos.coords.speed * 3.6) : 0;
+                    const rSpeed = Math.round(speedKmh);
                     if (speedKmh > maxSpeed) { maxSpeed = speedKmh; document.getElementById('max-speed').textContent = Math.round(maxSpeed).toString().padStart(2, '0'); }
-                    document.getElementById('speed').textContent = Math.round(speedKmh).toString().padStart(2, '0');
-                    document.getElementById('speed-alt').textContent = Math.round(speedKmh);
+                    document.getElementById('speed').textContent = rSpeed.toString().padStart(2, '0');
+                    document.getElementById('speed-alt').textContent = rSpeed;
                     document.getElementById('alt').textContent = pos.coords.altitude ? Math.round(pos.coords.altitude) + "M" : "---";
                     document.getElementById('coords').textContent = `${pos.coords.latitude.toFixed(4)}, ${pos.coords.longitude.toFixed(4)}`;
                     document.getElementById('sat').textContent = "FIX";
                     if (map && marker) { const latLng = [pos.coords.latitude, pos.coords.longitude]; marker.setLatLng(latLng); if (isMapActive) map.panTo(latLng); }
-                    if (isRecording) { sessionData.push({ ts: new Date().toISOString(), lat: pos.coords.latitude, lon: pos.coords.longitude, alt: pos.coords.altitude, speed: Math.round(speedKmh), roll: Math.round(smoothRoll), pitch: Math.round(smoothPitch) }); }
-                }, (err) => { document.getElementById('warning-overlay').style.display = 'flex'; }, { enableHighAccuracy: true });
+                    if (isRecording) { sessionData.push({ ts: new Date().toISOString(), lat: pos.coords.latitude, lon: pos.coords.longitude, alt: pos.coords.altitude, speed: rSpeed, roll: Math.round(smoothRoll), pitch: Math.round(smoothPitch) }); }
+                }, (err) => { 
+                    document.getElementById('warning-overlay').style.display = 'flex';
+                    document.getElementById('warning-overlay').innerHTML = "GPS OFFLINE<br><span style='font-size:0.6rem'>" + err.message + "</span>";
+                }, { enableHighAccuracy: true });
             }
         }
 
         function startSensors() {
             window.addEventListener('deviceorientation', (event) => {
-                currentA = event.alpha; currentB = event.beta; currentG = event.gamma;
+                currentA = event.alpha || 0; currentB = event.beta || 0; currentG = event.gamma || 0;
                 const mCurrent = getRotationMatrix(currentA, currentB, currentG), mRel = multiply(mCurrent, mCalibInv);
                 let rawR = Math.atan2(-mRel[2][0], mRel[2][2]) * 180 / Math.PI, rawP = Math.asin(Math.max(-1, Math.min(1, mRel[2][1]))) * 180 / Math.PI;
-                const orient = window.orientation || (screen.orientation && screen.orientation.angle) || 0;
+                
+                const orient = (screen.orientation && screen.orientation.angle) || window.orientation || 0;
                 let finalR, finalP;
                 if (orient === 0) { finalR = rawR; finalP = rawP; }
                 else if (orient === 90) { finalR = -rawP; finalP = rawR; }
                 else if (orient === -90 || orient === 270) { finalR = rawP; finalP = -rawR; }
+                else { finalR = rawR; finalP = rawP; }
+
                 smoothRoll = (K * finalR) + ((1 - K) * smoothRoll);
                 smoothPitch = (K * finalP) + ((1 - K) * smoothPitch);
+
                 const absR = Math.abs(Math.round(smoothRoll));
                 document.getElementById('lean-val').textContent = absR + "°";
                 if (absR > peakLean) { peakLean = absR; document.getElementById('peak-lean').textContent = peakLean; }
                 document.getElementById('lean-dot').style.left = Math.max(0, Math.min(100, ((smoothRoll+90)/180)*100)) + "%";
+
                 const roundP = Math.round(smoothPitch);
                 document.getElementById('pitch-val').textContent = roundP + "°";
                 if (Math.abs(roundP) > peakPitch) { peakPitch = Math.abs(roundP); document.getElementById('peak-pitch').textContent = peakPitch; }
                 document.getElementById('pitch-dot').style.top = Math.max(0, Math.min(100, ((-smoothPitch+90)/180)*100)) + "%";
+
                 let heading = event.webkitCompassHeading || (360 - event.alpha);
-                if (heading) { const directions = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW']; document.getElementById('heading').textContent = directions[Math.round(heading/45)%8] + " " + Math.round(heading) + "°"; }
+                if (heading) {
+                    const directions = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'];
+                    document.getElementById('heading').textContent = directions[Math.round(heading / 45) % 8] + " " + Math.round(heading) + "°";
+                }
             });
+
             if (window.DeviceMotionEvent) {
                 window.addEventListener('devicemotion', (event) => {
                     const acc = event.accelerationIncludingGravity;
