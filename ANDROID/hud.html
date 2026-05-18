@@ -2,10 +2,12 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>ADV TACTICAL HUD</title>
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#00ff00">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
     <style>
@@ -18,7 +20,8 @@
         }
 
         body, html {
-            margin: 0; padding: 0; height: 100%; width: 100%;
+            margin: 0; padding: 0; 
+            height: 100dvh; width: 100%; /* Use dvh to prevent overflow */
             background-color: var(--bg-black); color: var(--neon-green);
             font-family: 'JetBrains Mono', monospace; overflow: hidden;
             text-transform: uppercase;
@@ -47,11 +50,16 @@
                 "footer footer";
             grid-template-rows: 50px 1.5fr 1fr 100px 40px;
             grid-template-columns: 1fr 1fr;
-            height: 100vh; width: 100vw; box-sizing: border-box;
+            height: 100dvh; width: 100vw; box-sizing: border-box;
             padding: 10px; gap: 8px;
+            /* Account for safe areas (notches) */
+            padding-left: max(10px, env(safe-area-inset-left));
+            padding-right: max(10px, env(safe-area-inset-right));
+            padding-top: max(10px, env(safe-area-inset-top));
+            padding-bottom: max(10px, env(safe-area-inset-bottom));
         }
 
-        /* Landscape Override (Triggered by Media Query OR .landscape class) */
+        /* Landscape Override */
         @media (orientation: landscape) { body { --is-landscape: 1; } }
         
         body.landscape-mode .hud-container,
@@ -67,10 +75,10 @@
         }
 
         body.landscape-mode .speed-val, 
-        body[style*="--is-landscape: 1"] .speed-val { font-size: 6rem !important; }
+        body[style*="--is-landscape: 1"] .speed-val { font-size: 5rem !important; }
         
         body.landscape-mode .small-val,
-        body[style*="--is-landscape: 1"] .small-val { font-size: 1.8rem !important; }
+        body[style*="--is-landscape: 1"] .small-val { font-size: 1.6rem !important; }
 
         .hud-block {
             background: var(--panel-bg); border: 1px solid var(--neon-green);
@@ -138,14 +146,14 @@
     <div id="start-overlay">
         <h1 style="margin-bottom: 30px; letter-spacing: 5px;">SYSTEMS STANDBY</h1>
         <button id="start-button" onclick="initializeSystems()">INITIALIZE HUD</button>
-        <p style="margin-top: 20px; font-size: 0.7rem; color: #555;">STAGING SENSORS & WAKE LOCK</p>
+        <p style="margin-top: 20px; font-size: 0.7rem; color: #555;">STAGING SENSORS & FULL SCREEN</p>
     </div>
 
     <div id="warning-overlay">SENSORS OFFLINE</div>
 
     <div class="hud-container">
         <header class="hud-block hud-header">
-            <div>HUD v3.5 // <span id="lock-status" style="color:#555">WAKE LOCK: OFF</span></div>
+            <div>HUD v3.6 // <span id="lock-status" style="color:#555">WAKE LOCK: OFF</span></div>
             <div>
                 <button class="btn-action" id="map-btn" onclick="toggleMap()">MAP</button>
                 <button class="btn-action" onclick="calibrate()">CAL</button>
@@ -239,6 +247,15 @@
         setInterval(updateClock, 1000);
 
         async function initializeSystems() {
+            // Request Full Screen
+            try {
+                if (document.documentElement.requestFullscreen) {
+                    await document.documentElement.requestFullscreen();
+                } else if (document.documentElement.webkitRequestFullscreen) {
+                    await document.documentElement.webkitRequestFullscreen();
+                }
+            } catch (err) { console.log("FS rejected"); }
+
             await requestWakeLock();
             if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
                 try {
