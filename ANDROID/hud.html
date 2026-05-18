@@ -20,8 +20,7 @@
         }
 
         body, html {
-            margin: 0; padding: 0; 
-            height: 100dvh; width: 100%;
+            margin: 0; padding: 0; height: 100dvh; width: 100%;
             background-color: var(--bg-black); color: var(--neon-green);
             font-family: 'JetBrains Mono', monospace; overflow: hidden;
             text-transform: uppercase;
@@ -50,11 +49,11 @@
             grid-template-rows: 50px 1.5fr 1fr 100px 40px;
             grid-template-columns: 1fr 1fr;
             height: 98dvh; width: 100vw; box-sizing: border-box;
-            padding: 8px; gap: 8px;
-            padding-left: max(8px, env(safe-area-inset-left));
-            padding-right: max(8px, env(safe-area-inset-right));
-            padding-top: max(8px, env(safe-area-inset-top));
-            padding-bottom: max(8px, env(safe-area-inset-bottom));
+            padding: 10px; gap: 8px;
+            padding-left: max(10px, env(safe-area-inset-left));
+            padding-right: max(10px, env(safe-area-inset-right));
+            padding-top: max(10px, env(safe-area-inset-top));
+            padding-bottom: max(10px, env(safe-area-inset-bottom));
         }
 
         body.landscape-mode .hud-container {
@@ -121,7 +120,7 @@
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background: rgba(255, 0, 0, 0.4); display: none; align-items: center; justify-content: center;
             font-size: 1.2rem; font-weight: bold; color: white; z-index: 9999;
-            pointer-events: none; text-align: center; padding: 20px;
+            pointer-events: none; text-align: center;
         }
 
         .visualizer-h { width: 70%; height: 3px; background: #222; margin-top: 5px; position: relative; }
@@ -137,14 +136,14 @@
     <div id="start-overlay">
         <h1 style="margin-bottom: 20px; letter-spacing: 5px;">SYSTEMS STANDBY</h1>
         <button id="start-button" onclick="initializeSystems()">INITIALIZE HUD</button>
-        <p style="margin-top: 20px; font-size: 0.6rem; color: #555;">v3.8 // TOUCH TO START</p>
+        <p style="margin-top: 20px; font-size: 0.6rem; color: #555;">v3.9 // TOUCH TO START</p>
     </div>
 
     <div id="warning-overlay">SENSORS OFFLINE</div>
 
     <div class="hud-container">
         <header class="hud-block hud-header">
-            <div>HUD v3.8 // <span id="lock-status" style="color:#555">WAKE LOCK: OFF</span></div>
+            <div>HUD v3.9 // <span id="lock-status" style="color:#555">WAKE LOCK: OFF</span></div>
             <div style="display:flex; gap:4px">
                 <button class="btn-action" onclick="toggleFS()">FULL</button>
                 <button class="btn-action" id="map-btn" onclick="toggleMap()">MAP</button>
@@ -194,7 +193,7 @@
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
     <script>
-        // --- UTILS ---
+        // --- MATRIX MATH HELPERS ---
         function getRotationMatrix(alpha, beta, gamma) {
             const _x = (beta || 0) * Math.PI / 180, _y = (gamma || 0) * Math.PI / 180, _z = (alpha || 0) * Math.PI / 180;
             const cX = Math.cos(_x), sX = Math.sin(_x), cY = Math.cos(_y), sY = Math.sin(_y), cZ = Math.cos(_z), sZ = Math.sin(_z);
@@ -207,49 +206,42 @@
         }
         function transpose(A) { return [[A[0][0], A[1][0], A[2][0]], [A[0][1], A[1][1], A[2][1]], [A[0][2], A[1][2], A[2][2]]]; }
 
-        // --- STATE ---
+        // --- CORE STATE ---
         let maxSpeed = 0, peakLean = 0, peakPitch = 0, wakeLock = null;
         let isRecording = false, sessionData = [], isMapActive = false, map = null, marker = null;
         let currentA=0, currentB=0, currentG=0, smoothRoll=0, smoothPitch=0;
         const K = 0.15;
-        
         let mCalibInv = [[1,0,0],[0,1,0],[0,0,1]];
         try { 
             let saved = localStorage.getItem('mCalibInv');
             if (saved) mCalibInv = JSON.parse(saved);
-        } catch(e) { console.error("Calib Load Error", e); }
+        } catch(e) {}
 
-        // --- CORE FUNCTIONS ---
+        // --- FUNCTIONS ---
         function updateClock() {
             const now = new Date();
             document.getElementById('time').textContent = now.getHours().toString().padStart(2, '0') + ":" + now.getMinutes().toString().padStart(2, '0');
         }
         setInterval(updateClock, 1000);
 
-        function updateOrientationUI() {
+        function updateOrientation() {
             const isLandscape = window.innerWidth > window.innerHeight;
             document.body.classList.toggle('landscape-mode', isLandscape);
-            if (map && isMapActive) {
-                setTimeout(() => { map.invalidateSize(); if (marker) map.setView(marker.getLatLng()); }, 300);
-            }
+            if (map && isMapActive) { setTimeout(() => { map.invalidateSize(); if (marker) map.setView(marker.getLatLng()); }, 300); }
         }
-        window.addEventListener('resize', updateOrientationUI);
+        window.addEventListener('resize', updateOrientation);
 
         async function initializeSystems() {
             document.getElementById('start-overlay').style.display = 'none';
-            updateOrientationUI();
-            
-            // Try Sensors
+            updateOrientation();
             if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
                 try {
                     const permission = await DeviceOrientationEvent.requestPermission();
                     if (permission === 'granted') startSensors();
-                } catch (err) { console.error(err); }
+                } catch (err) {}
             } else { startSensors(); }
-            
             startGPS();
             requestWakeLock();
-            window.scrollTo(0, 1);
         }
 
         async function requestWakeLock() {
@@ -258,19 +250,14 @@
                     wakeLock = await navigator.wakeLock.request('screen');
                     document.getElementById('lock-status').textContent = "WAKE LOCK: ACTIVE";
                     document.getElementById('lock-status').style.color = "var(--neon-green)";
-                } catch (err) { console.warn("WakeLock Error", err); }
+                } catch (err) {}
             }
         }
 
         function toggleFS() {
             const doc = document.documentElement;
-            if (!document.fullscreenElement && !document.webkitFullscreenElement) {
-                if (doc.requestFullscreen) doc.requestFullscreen();
-                else if (doc.webkitRequestFullscreen) doc.webkitRequestFullscreen();
-            } else {
-                if (document.exitFullscreen) document.exitFullscreen();
-                else if (document.webkitExitFullscreen) document.webkitExitFullscreen();
-            }
+            if (!document.fullscreenElement) { if (doc.requestFullscreen) doc.requestFullscreen(); }
+            else { if (document.exitFullscreen) document.exitFullscreen(); }
         }
 
         function toggleMap() {
@@ -281,10 +268,9 @@
                 if (!map) {
                     map = L.map('map', { zoomControl: false, attributionControl: false }).setView([0, 0], 15);
                     L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {}).addTo(map);
-                    const neonIcon = L.divIcon({ className: 'custom-div-icon', html: "<div style='background-color:var(--neon-green); width:8px; height:8px; border-radius:50%; border:1px solid white; box-shadow:0 0 8px var(--neon-green)'></div>", iconSize: [8, 8], iconAnchor: [4, 4] });
-                    marker = L.marker([0, 0], { icon: neonIcon }).addTo(map);
+                    marker = L.marker([0, 0], { icon: L.divIcon({ className: 'custom-div-icon', html: "<div style='background-color:var(--neon-green); width:8px; height:8px; border-radius:50%; border:1px solid white; box-shadow:0 0 8px var(--neon-green)'></div>", iconSize: [8, 8] }) }).addTo(map);
                 }
-                setTimeout(() => { map.invalidateSize(); if (marker) map.setView(marker.getLatLng()); }, 200);
+                setTimeout(() => map.invalidateSize(), 200);
             } else { mapDiv.style.display = 'none'; miniSpeed.style.display = 'none'; mapBtn.classList.remove('active'); }
         }
 
@@ -293,7 +279,7 @@
             mCalibInv = transpose(mCurrent);
             localStorage.setItem('mCalibInv', JSON.stringify(mCalibInv));
             resetMax();
-            alert("SENSORS ZEROED");
+            alert("ZEROED");
         }
 
         function startGPS() {
@@ -308,12 +294,9 @@
                     document.getElementById('alt').textContent = pos.coords.altitude ? Math.round(pos.coords.altitude) + "M" : "---";
                     document.getElementById('coords').textContent = `${pos.coords.latitude.toFixed(4)}, ${pos.coords.longitude.toFixed(4)}`;
                     document.getElementById('sat').textContent = "FIX";
-                    if (map && marker) { const latLng = [pos.coords.latitude, pos.coords.longitude]; marker.setLatLng(latLng); if (isMapActive) map.panTo(latLng); }
+                    if (map && marker) { marker.setLatLng([pos.coords.latitude, pos.coords.longitude]); if (isMapActive) map.panTo([pos.coords.latitude, pos.coords.longitude]); }
                     if (isRecording) { sessionData.push({ ts: new Date().toISOString(), lat: pos.coords.latitude, lon: pos.coords.longitude, alt: pos.coords.altitude, speed: rSpeed, roll: Math.round(smoothRoll), pitch: Math.round(smoothPitch) }); }
-                }, (err) => { 
-                    document.getElementById('warning-overlay').style.display = 'flex';
-                    document.getElementById('warning-overlay').innerHTML = "GPS OFFLINE<br><span style='font-size:0.6rem'>" + err.message + "</span>";
-                }, { enableHighAccuracy: true });
+                }, (err) => { document.getElementById('warning-overlay').style.display = 'block'; document.getElementById('warning-overlay').textContent = "GPS ERROR: " + err.message; }, { enableHighAccuracy: true });
             }
         }
 
@@ -322,40 +305,27 @@
                 currentA = event.alpha || 0; currentB = event.beta || 0; currentG = event.gamma || 0;
                 const mCurrent = getRotationMatrix(currentA, currentB, currentG), mRel = multiply(mCurrent, mCalibInv);
                 let rawR = Math.atan2(-mRel[2][0], mRel[2][2]) * 180 / Math.PI, rawP = Math.asin(Math.max(-1, Math.min(1, mRel[2][1]))) * 180 / Math.PI;
-                
                 const orient = (screen.orientation && screen.orientation.angle) || window.orientation || 0;
                 let finalR, finalP;
-                if (orient === 0) { finalR = rawR; finalP = rawP; }
-                else if (orient === 90) { finalR = -rawP; finalP = rawR; }
+                if (orient === 90) { finalR = -rawP; finalP = rawR; }
                 else if (orient === -90 || orient === 270) { finalR = rawP; finalP = -rawR; }
                 else { finalR = rawR; finalP = rawP; }
-
-                smoothRoll = (K * finalR) + ((1 - K) * smoothRoll);
-                smoothPitch = (K * finalP) + ((1 - K) * smoothPitch);
-
+                smoothRoll = (K * finalR) + ((1 - K) * smoothRoll); smoothPitch = (K * finalP) + ((1 - K) * smoothPitch);
                 const absR = Math.abs(Math.round(smoothRoll));
                 document.getElementById('lean-val').textContent = absR + "°";
                 if (absR > peakLean) { peakLean = absR; document.getElementById('peak-lean').textContent = peakLean; }
                 document.getElementById('lean-dot').style.left = Math.max(0, Math.min(100, ((smoothRoll+90)/180)*100)) + "%";
-
                 const roundP = Math.round(smoothPitch);
                 document.getElementById('pitch-val').textContent = roundP + "°";
                 if (Math.abs(roundP) > peakPitch) { peakPitch = Math.abs(roundP); document.getElementById('peak-pitch').textContent = peakPitch; }
                 document.getElementById('pitch-dot').style.top = Math.max(0, Math.min(100, ((-smoothPitch+90)/180)*100)) + "%";
-
                 let heading = event.webkitCompassHeading || (360 - event.alpha);
-                if (heading) {
-                    const directions = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'];
-                    document.getElementById('heading').textContent = directions[Math.round(heading / 45) % 8] + " " + Math.round(heading) + "°";
-                }
+                if (heading) { const directions = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW']; document.getElementById('heading').textContent = directions[Math.round(heading/45)%8] + " " + Math.round(heading) + "°"; }
             });
-
-            if (window.DeviceMotionEvent) {
-                window.addEventListener('devicemotion', (event) => {
-                    const acc = event.accelerationIncludingGravity;
-                    if (acc) { const x = Math.max(-50, Math.min(50, (acc.x*5))), y = Math.max(-50, Math.min(50, (acc.y*5))); document.getElementById('g-ball').style.transform = `translate(calc(-50% + ${-x}px), calc(-50% + ${y}px))`; }
-                });
-            }
+            window.addEventListener('devicemotion', (event) => {
+                const acc = event.accelerationIncludingGravity;
+                if (acc) { const x = Math.max(-50, Math.min(50, (acc.x*5))), y = Math.max(-50, Math.min(50, (acc.y*5))); document.getElementById('g-ball').style.transform = `translate(calc(-50% + ${-x}px), calc(-50% + ${y}px))`; }
+            });
         }
 
         function toggleRecord() {
@@ -376,11 +346,11 @@
         }
 
         function resetMax() { maxSpeed = 0; peakLean = 0; peakPitch = 0; document.getElementById('max-speed').textContent = "00"; document.getElementById('peak-lean').textContent = "0"; document.getElementById('peak-pitch').textContent = "0"; }
-
+        
         if ("getBattery" in navigator) {
             navigator.getBattery().then(batt => {
-                const updateBatt = () => { document.getElementById('batt').textContent = Math.round(batt.level * 100) + "%"; document.getElementById('batt-stat').textContent = batt.charging ? "⚡" : ""; };
-                updateBatt(); batt.addEventListener('levelchange', updateBatt); batt.addEventListener('chargingchange', updateBatt);
+                const update = () => { document.getElementById('batt').textContent = Math.round(batt.level * 100) + "%"; document.getElementById('batt-stat').textContent = batt.charging ? "⚡" : ""; };
+                update(); batt.onlevelchange = update; batt.onchargingchange = update;
             });
         }
         if ('serviceWorker' in navigator) { window.addEventListener('load', () => { navigator.serviceWorker.register('./sw.js'); }); }
