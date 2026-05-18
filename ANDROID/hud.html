@@ -226,7 +226,7 @@
                 document.body.classList.remove('landscape-mode');
             }
             if (map && isMapActive) refreshMap();
-            window.scrollTo(0, 1); // Hide address bar trick
+            window.scrollTo(0, 1);
         }
         window.addEventListener('resize', updateOrientation);
         updateOrientation();
