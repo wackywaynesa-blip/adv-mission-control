@@ -1,7 +1,8 @@
 {
   "name": "ADV Tactical HUD",
   "short_name": "ADV HUD",
-  "description": "Tactical Handlebar Dashboard",
+  "description": "Tactical Handlebar Dashboard for Adventure and Off-road Riding",
+  "categories": ["sports", "utilities", "navigation"],
   "start_url": "./hud.html",
   "display": "standalone",
   "orientation": "portrait",
