@@ -21,7 +21,7 @@
 
         body, html {
             margin: 0; padding: 0; 
-            height: 100dvh; width: 100%; /* Use dvh to prevent overflow */
+            height: 100dvh; width: 100%;
             background-color: var(--bg-black); color: var(--neon-green);
             font-family: 'JetBrains Mono', monospace; overflow: hidden;
             text-transform: uppercase;
@@ -39,7 +39,6 @@
             font-size: 1.5rem; cursor: pointer; box-shadow: 0 0 15px var(--neon-green-glow);
         }
 
-        /* Base Grid (Portrait) */
         .hud-container {
             display: grid;
             grid-template-areas: 
@@ -50,16 +49,14 @@
                 "footer footer";
             grid-template-rows: 50px 1.5fr 1fr 100px 40px;
             grid-template-columns: 1fr 1fr;
-            height: 100dvh; width: 100vw; box-sizing: border-box;
-            padding: 10px; gap: 8px;
-            /* Account for safe areas (notches) */
-            padding-left: max(10px, env(safe-area-inset-left));
-            padding-right: max(10px, env(safe-area-inset-right));
-            padding-top: max(10px, env(safe-area-inset-top));
-            padding-bottom: max(10px, env(safe-area-inset-bottom));
+            height: 98dvh; width: 100vw; box-sizing: border-box;
+            padding: 8px; gap: 8px;
+            padding-left: max(8px, env(safe-area-inset-left));
+            padding-right: max(8px, env(safe-area-inset-right));
+            padding-top: max(8px, env(safe-area-inset-top));
+            padding-bottom: max(8px, env(safe-area-inset-bottom));
         }
 
-        /* Landscape Override */
         @media (orientation: landscape) { body { --is-landscape: 1; } }
         
         body.landscape-mode .hud-container,
@@ -71,7 +68,7 @@
                 "footer footer footer";
             grid-template-rows: 40px 1fr 1fr 30px;
             grid-template-columns: 1.5fr 1fr 1fr;
-            padding: 5px; gap: 5px;
+            padding: 5px; gap: 5px; height: 96dvh;
         }
 
         body.landscape-mode .speed-val, 
@@ -88,73 +85,74 @@
         }
 
         .hud-header { 
-            grid-area: header; font-size: 0.7rem; letter-spacing: 1px;
-            flex-direction: row; justify-content: space-between; padding: 0 15px;
+            grid-area: header; font-size: 0.6rem; letter-spacing: 1px;
+            flex-direction: row; justify-content: space-between; padding: 0 10px;
         }
-        .hud-footer { grid-area: footer; font-size: 0.7rem; color: #888; }
+        .hud-footer { grid-area: footer; font-size: 0.6rem; color: #888; }
 
         .btn-action {
             background: transparent; border: 1px solid var(--neon-green);
-            color: var(--neon-green); font-family: inherit; font-size: 0.6rem;
-            padding: 4px 8px; cursor: pointer; border-radius: 2px;
+            color: var(--neon-green); font-family: inherit; font-size: 0.55rem;
+            padding: 4px 6px; cursor: pointer; border-radius: 2px;
         }
         .btn-action:active { background: var(--neon-green); color: black; }
         .btn-action.active { background: var(--neon-green); color: black; }
         
-        #rec-btn.active { border-color: var(--alert-red); color: var(--alert-red); background: transparent; animation: pulse 1s infinite; }
+        #rec-btn.active { border-color: var(--alert-red); color: var(--alert-red); animation: pulse 1s infinite; }
 
         @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
 
         .speed-area { grid-area: speed; }
-        .speed-val { font-size: 8rem; font-weight: bold; line-height: 1; text-shadow: 0 0 20px var(--neon-green-glow); }
-        .speed-unit { font-size: 1.2rem; opacity: 0.7; }
-        .max-speed-label { position: absolute; bottom: 5px; right: 10px; font-size: 0.6rem; color: #555; }
+        .speed-val { font-size: 7rem; font-weight: bold; line-height: 1; text-shadow: 0 0 20px var(--neon-green-glow); }
+        .speed-unit { font-size: 1rem; opacity: 0.7; }
+        .max-speed-label { position: absolute; bottom: 5px; right: 8px; font-size: 0.5rem; color: #555; }
 
         #map { width: 100%; height: 100%; position: absolute; top: 0; left: 0; z-index: 10; display: none; background: #000; }
-        #mini-speed { position: absolute; top: 10px; left: 10px; z-index: 20; background: rgba(0,0,0,0.8); padding: 5px 10px; border: 1px solid var(--neon-green); font-weight: bold; font-size: 1rem; display: none; }
+        #mini-speed { position: absolute; top: 5px; left: 5px; z-index: 20; background: rgba(0,0,0,0.8); padding: 3px 6px; border: 1px solid var(--neon-green); font-weight: bold; font-size: 0.8rem; display: none; }
 
         .lean-area { grid-area: lean; }
         .pitch-area { grid-area: pitch; }
         .compass-area { grid-area: compass; }
 
-        .small-val { font-size: 2.5rem; font-weight: bold; }
+        .small-val { font-size: 2.2rem; font-weight: bold; }
         .small-label { font-size: 0.5rem; position: absolute; top: 3px; left: 8px; color: #888; }
-        .peak-label { position: absolute; bottom: 3px; right: 8px; font-size: 0.5rem; color: #444; }
+        .peak-label { position: absolute; bottom: 3px; right: 8px; font-size: 0.4rem; color: #444; }
 
         .data-area { grid-area: data; display: grid; grid-template-columns: 1fr 1fr; gap: 3px; border: none; background: transparent; box-shadow: none; }
         .data-item { background: var(--panel-bg); border: 1px solid #333; padding: 2px; border-radius: 4px; text-align: center; display: flex; flex-direction: column; justify-content: center; }
-        .data-val { font-size: 0.8rem; font-weight: bold; display: block; }
+        .data-val { font-size: 0.75rem; font-weight: bold; display: block; }
         .data-label { font-size: 0.4rem; color: #666; }
 
         #warning-overlay {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background: rgba(255, 0, 0, 0.2); display: none; align-items: center; justify-content: center;
-            font-size: 2rem; font-weight: bold; color: white; z-index: 9999;
+            font-size: 1.5rem; font-weight: bold; color: white; z-index: 9999;
             pointer-events: none; animation: flash 0.5s infinite alternate;
         }
 
         .visualizer-h { width: 70%; height: 3px; background: #222; margin-top: 5px; position: relative; }
-        .visualizer-v { height: 40%; width: 3px; background: #222; position: absolute; right: 10px; top: 30%; }
-        #lean-dot { width: 8px; height: 8px; background: var(--neon-green); border-radius: 50%; position: absolute; top: -3px; left: 50%; transform: translateX(-50%); transition: left 0.1s linear; box-shadow: 0 0 10px var(--neon-green); }
-        #pitch-dot { width: 8px; height: 8px; background: var(--neon-green); border-radius: 50%; position: absolute; left: -3px; top: 50%; transform: translateY(-50%); transition: top 0.1s linear; box-shadow: 0 0 10px var(--neon-green); }
+        .visualizer-v { height: 40%; width: 2px; background: #222; position: absolute; right: 8px; top: 30%; }
+        #lean-dot { width: 6px; height: 6px; background: var(--neon-green); border-radius: 50%; position: absolute; top: -2px; left: 50%; transform: translateX(-50%); transition: left 0.1s linear; }
+        #pitch-dot { width: 6px; height: 6px; background: var(--neon-green); border-radius: 50%; position: absolute; left: -2px; top: 50%; transform: translateY(-50%); transition: top 0.1s linear; }
 
-        #g-meter { width: 25px; height: 25px; border: 1px solid #333; border-radius: 50%; position: absolute; top: 5px; right: 5px; overflow: hidden; z-index: 21; }
-        #g-ball { width: 4px; height: 4px; background: var(--neon-green); border-radius: 50%; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); }
+        #g-meter { width: 20px; height: 20px; border: 1px solid #333; border-radius: 50%; position: absolute; top: 5px; right: 5px; overflow: hidden; z-index: 21; }
+        #g-ball { width: 3px; height: 3px; background: var(--neon-green); border-radius: 50%; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); }
     </style>
 </head>
 <body>
     <div id="start-overlay">
-        <h1 style="margin-bottom: 30px; letter-spacing: 5px;">SYSTEMS STANDBY</h1>
+        <h1 style="margin-bottom: 20px; letter-spacing: 5px;">SYSTEMS STANDBY</h1>
         <button id="start-button" onclick="initializeSystems()">INITIALIZE HUD</button>
-        <p style="margin-top: 20px; font-size: 0.7rem; color: #555;">STAGING SENSORS & FULL SCREEN</p>
+        <p style="margin-top: 20px; font-size: 0.6rem; color: #555;">TOUCH TO START SENSORS & HUD</p>
     </div>
 
     <div id="warning-overlay">SENSORS OFFLINE</div>
 
     <div class="hud-container">
         <header class="hud-block hud-header">
-            <div>HUD v3.6 // <span id="lock-status" style="color:#555">WAKE LOCK: OFF</span></div>
-            <div>
+            <div>HUD v3.7 // <span id="lock-status" style="color:#555">WAKE LOCK: OFF</span></div>
+            <div style="display:flex; gap:4px">
+                <button class="btn-action" onclick="toggleFS()">FULL</button>
                 <button class="btn-action" id="map-btn" onclick="toggleMap()">MAP</button>
                 <button class="btn-action" onclick="calibrate()">CAL</button>
                 <button class="btn-action" id="rec-btn" onclick="toggleRecord()">REC</button>
@@ -202,6 +200,23 @@
 
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
     <script>
+        // --- FULLSCREEN LOGIC ---
+        function toggleFS() {
+            if (!document.fullscreenElement && !document.webkitFullscreenElement) {
+                if (document.documentElement.requestFullscreen) {
+                    document.documentElement.requestFullscreen();
+                } else if (document.documentElement.webkitRequestFullscreen) {
+                    document.documentElement.webkitRequestFullscreen();
+                }
+            } else {
+                if (document.exitFullscreen) {
+                    document.exitFullscreen();
+                } else if (document.webkitExitFullscreen) {
+                    document.webkitExitFullscreen();
+                }
+            }
+        }
+
         // --- ORIENTATION TRACKER ---
         function updateOrientation() {
             const isLandscape = window.innerWidth > window.innerHeight;
@@ -211,6 +226,7 @@
                 document.body.classList.remove('landscape-mode');
             }
             if (map && isMapActive) refreshMap();
+            window.scrollTo(0, 1); // Hide address bar trick
         }
         window.addEventListener('resize', updateOrientation);
         updateOrientation();
@@ -219,13 +235,9 @@
         function getRotationMatrix(alpha, beta, gamma) {
             const _x = beta * Math.PI / 180, _y = gamma * Math.PI / 180, _z = alpha * Math.PI / 180;
             const cX = Math.cos(_x), sX = Math.sin(_x), cY = Math.cos(_y), sY = Math.sin(_y), cZ = Math.cos(_z), sZ = Math.sin(_z);
-            return [
-                [cY * cZ - sX * sY * sZ, -cX * sZ, cZ * sY + cY * sX * sZ],
-                [cZ * sX * sY + cY * sZ, cX * cZ, sY * sZ - cY * cZ * sX],
-                [-cX * sY, sX, cX * cY]
-            ];
+            return [[cY*cZ-sX*sY*sZ, -cX*sZ, cZ*sY+cY*sX*sZ], [cZ*sX*sY+cY*sZ, cX*cZ, sY*sZ-cY*cZ*sX], [-cX*sY, sX, cX*cY]];
         }
-        function multiply(A, B) {
+        function multiply(A,B) {
             let C = [[0,0,0],[0,0,0],[0,0,0]];
             for(let i=0; i<3; i++) for(let j=0; j<3; j++) for(let k=0; k<3; k++) C[i][j] += A[i][k] * B[k][j];
             return C;
@@ -236,8 +248,7 @@
         let maxSpeed = 0, peakLean = 0, peakPitch = 0, wakeLock = null;
         let isRecording = false, sessionData = [], isMapActive = false, map = null, marker = null;
         let mCalibInv = JSON.parse(localStorage.getItem('mCalibInv')) || [[1,0,0],[0,1,0],[0,0,1]];
-        let currentA = 0, currentB = 0, currentG = 0;
-        let smoothRoll = 0, smoothPitch = 0;
+        let currentA=0, currentB=0, currentG=0, smoothRoll=0, smoothPitch=0;
         const K = 0.15;
 
         function updateClock() {
@@ -247,15 +258,6 @@
         setInterval(updateClock, 1000);
 
         async function initializeSystems() {
-            // Request Full Screen
-            try {
-                if (document.documentElement.requestFullscreen) {
-                    await document.documentElement.requestFullscreen();
-                } else if (document.documentElement.webkitRequestFullscreen) {
-                    await document.documentElement.webkitRequestFullscreen();
-                }
-            } catch (err) { console.log("FS rejected"); }
-
             await requestWakeLock();
             if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
                 try {
@@ -265,6 +267,7 @@
             } else { startSensors(); }
             startGPS();
             document.getElementById('start-overlay').style.display = 'none';
+            window.scrollTo(0, 1);
         }
 
         async function requestWakeLock() {
@@ -284,25 +287,18 @@
                 mapDiv.style.display = 'block'; miniSpeed.style.display = 'block'; mapBtn.classList.add('active');
                 if (!map) initMap();
                 refreshMap();
-            } else {
-                mapDiv.style.display = 'none'; miniSpeed.style.display = 'none'; mapBtn.classList.remove('active');
-            }
+            } else { mapDiv.style.display = 'none'; miniSpeed.style.display = 'none'; mapBtn.classList.remove('active'); }
         }
 
         function initMap() {
-            map = L.map('map', { zoomControl: false, attributionControl: true }).setView([0, 0], 15);
-            L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', { attribution: '&copy; CARTO' }).addTo(map);
-            const neonIcon = L.divIcon({ className: 'custom-div-icon', html: "<div style='background-color:var(--neon-green); width:10px; height:10px; border-radius:50%; border:2px solid white; box-shadow:0 0 10px var(--neon-green)'></div>", iconSize: [10, 10], iconAnchor: [5, 5] });
+            map = L.map('map', { zoomControl: false, attributionControl: false }).setView([0, 0], 15);
+            L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {}).addTo(map);
+            const neonIcon = L.divIcon({ className: 'custom-div-icon', html: "<div style='background-color:var(--neon-green); width:8px; height:8px; border-radius:50%; border:1px solid white; box-shadow:0 0 8px var(--neon-green)'></div>", iconSize: [8, 8], iconAnchor: [4, 4] });
             marker = L.marker([0, 0], { icon: neonIcon }).addTo(map);
         }
 
         function refreshMap() {
-            if (map && isMapActive) {
-                setTimeout(() => { 
-                    map.invalidateSize(); 
-                    if (marker) map.setView(marker.getLatLng());
-                }, 200);
-            }
+            if (map && isMapActive) { setTimeout(() => { map.invalidateSize(); if (marker) map.setView(marker.getLatLng()); }, 200); }
         }
 
         function calibrate() {
@@ -333,44 +329,30 @@
         function startSensors() {
             window.addEventListener('deviceorientation', (event) => {
                 currentA = event.alpha; currentB = event.beta; currentG = event.gamma;
-                const mCurrent = getRotationMatrix(currentA, currentB, currentG);
-                const mRel = multiply(mCurrent, mCalibInv);
-                let rawR = Math.atan2(-mRel[2][0], mRel[2][2]) * 180 / Math.PI;
-                let rawP = Math.asin(Math.max(-1, Math.min(1, mRel[2][1]))) * 180 / Math.PI;
-
+                const mCurrent = getRotationMatrix(currentA, currentB, currentG), mRel = multiply(mCurrent, mCalibInv);
+                let rawR = Math.atan2(-mRel[2][0], mRel[2][2]) * 180 / Math.PI, rawP = Math.asin(Math.max(-1, Math.min(1, mRel[2][1]))) * 180 / Math.PI;
                 const orient = window.orientation || (screen.orientation && screen.orientation.angle) || 0;
                 let finalR, finalP;
                 if (orient === 0) { finalR = rawR; finalP = rawP; }
                 else if (orient === 90) { finalR = -rawP; finalP = rawR; }
                 else if (orient === -90 || orient === 270) { finalR = rawP; finalP = -rawR; }
-
                 smoothRoll = (K * finalR) + ((1 - K) * smoothRoll);
                 smoothPitch = (K * finalP) + ((1 - K) * smoothPitch);
-
                 const absR = Math.abs(Math.round(smoothRoll));
                 document.getElementById('lean-val').textContent = absR + "°";
                 if (absR > peakLean) { peakLean = absR; document.getElementById('peak-lean').textContent = peakLean; }
-                document.getElementById('lean-dot').style.left = Math.max(0, Math.min(100, ((smoothRoll + 90) / 180) * 100)) + "%";
-
+                document.getElementById('lean-dot').style.left = Math.max(0, Math.min(100, ((smoothRoll+90)/180)*100)) + "%";
                 const roundP = Math.round(smoothPitch);
                 document.getElementById('pitch-val').textContent = roundP + "°";
                 if (Math.abs(roundP) > peakPitch) { peakPitch = Math.abs(roundP); document.getElementById('peak-pitch').textContent = peakPitch; }
-                document.getElementById('pitch-dot').style.top = Math.max(0, Math.min(100, ((-smoothPitch + 90) / 180) * 100)) + "%";
-
+                document.getElementById('pitch-dot').style.top = Math.max(0, Math.min(100, ((-smoothPitch+90)/180)*100)) + "%";
                 let heading = event.webkitCompassHeading || (360 - event.alpha);
-                if (heading) {
-                    const directions = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'];
-                    document.getElementById('heading').textContent = directions[Math.round(heading / 45) % 8] + " " + Math.round(heading) + "°";
-                }
+                if (heading) { const directions = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW']; document.getElementById('heading').textContent = directions[Math.round(heading/45)%8] + " " + Math.round(heading) + "°"; }
             });
-
             if (window.DeviceMotionEvent) {
                 window.addEventListener('devicemotion', (event) => {
                     const acc = event.accelerationIncludingGravity;
-                    if (acc) {
-                        const x = Math.max(-50, Math.min(50, (acc.x * 5))), y = Math.max(-50, Math.min(50, (acc.y * 5)));
-                        document.getElementById('g-ball').style.transform = `translate(calc(-50% + ${-x}px), calc(-50% + ${y}px))`;
-                    }
+                    if (acc) { const x = Math.max(-50, Math.min(50, (acc.x*5))), y = Math.max(-50, Math.min(50, (acc.y*5))); document.getElementById('g-ball').style.transform = `translate(calc(-50% + ${-x}px), calc(-50% + ${y}px))`; }
                 });
             }
         }
@@ -400,7 +382,6 @@
                 updateBatt(); batt.addEventListener('levelchange', updateBatt); batt.addEventListener('chargingchange', updateBatt);
             });
         }
-
         if ('serviceWorker' in navigator) { window.addEventListener('load', () => { navigator.serviceWorker.register('./sw.js'); }); }
     </script>
 </body>
