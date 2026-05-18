@@ -1,0 +1,472 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>ADV TACTICAL HUD</title>
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#00ff00">
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+    <style>
+        :root {
+            --neon-green: #00ff00;
+            --neon-green-glow: rgba(0, 255, 0, 0.3);
+            --bg-black: #050505;
+            --panel-bg: rgba(15, 15, 15, 0.9);
+            --alert-red: #ff3333;
+        }
+
+        body, html {
+            margin: 0; padding: 0; height: 100%; width: 100%;
+            background-color: var(--bg-black); color: var(--neon-green);
+            font-family: 'JetBrains Mono', monospace; overflow: hidden;
+            text-transform: uppercase;
+        }
+
+        #start-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: var(--bg-black); z-index: 10000;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            text-align: center;
+        }
+        #start-button {
+            background: transparent; border: 2px solid var(--neon-green);
+            color: var(--neon-green); padding: 20px 40px; font-family: inherit;
+            font-size: 1.5rem; cursor: pointer; box-shadow: 0 0 15px var(--neon-green-glow);
+        }
+
+        .hud-container {
+            display: grid;
+            grid-template-areas: 
+                "header header"
+                "speed speed"
+                "lean pitch"
+                "compass data"
+                "footer footer";
+            grid-template-rows: 50px 1.5fr 1fr 100px 40px;
+            grid-template-columns: 1fr 1fr;
+            height: 100vh; width: 100vw; box-sizing: border-box;
+            padding: 10px; gap: 10px;
+        }
+
+        .hud-block {
+            background: var(--panel-bg); border: 1px solid var(--neon-green);
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            box-shadow: inset 0 0 10px var(--neon-green-glow); border-radius: 4px;
+            position: relative; overflow: hidden;
+        }
+
+        .hud-header { 
+            grid-area: header; font-size: 0.7rem; letter-spacing: 1px;
+            flex-direction: row; justify-content: space-between; padding: 0 15px;
+        }
+        .hud-footer { grid-area: footer; font-size: 0.7rem; color: #888; }
+
+        .btn-action {
+            background: transparent; border: 1px solid var(--neon-green);
+            color: var(--neon-green); font-family: inherit; font-size: 0.6rem;
+            padding: 4px 8px; cursor: pointer; border-radius: 2px;
+        }
+        .btn-action:active { background: var(--neon-green); color: black; }
+        .btn-action.active { background: var(--neon-green); color: black; }
+        
+        #rec-btn.active { border-color: var(--alert-red); color: var(--alert-red); background: transparent; animation: pulse 1s infinite; }
+
+        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
+
+        .speed-area { grid-area: speed; }
+        .speed-val { font-size: 8rem; font-weight: bold; line-height: 1; text-shadow: 0 0 20px var(--neon-green-glow); }
+        .speed-unit { font-size: 1.5rem; margin-top: -10px; opacity: 0.7; }
+        .max-speed-label { position: absolute; bottom: 10px; right: 15px; font-size: 0.7rem; color: #555; }
+
+        /* Map Container */
+        #map {
+            width: 100%; height: 100%; position: absolute; top: 0; left: 0;
+            z-index: 10; display: none; background: #000;
+        }
+        #mini-speed {
+            position: absolute; top: 10px; left: 10px; z-index: 20;
+            background: rgba(0,0,0,0.8); padding: 5px 10px; border: 1px solid var(--neon-green);
+            font-weight: bold; font-size: 1.2rem; display: none;
+        }
+
+        .lean-area { grid-area: lean; }
+        .pitch-area { grid-area: pitch; }
+        .compass-area { grid-area: compass; }
+
+        .small-val { font-size: 2.5rem; font-weight: bold; }
+        .small-label { font-size: 0.6rem; position: absolute; top: 5px; left: 10px; color: #888; }
+        .peak-label { position: absolute; bottom: 5px; right: 10px; font-size: 0.5rem; color: #444; }
+
+        .data-area { 
+            grid-area: data; 
+            display: grid; grid-template-columns: 1fr 1fr; gap: 5px;
+            border: none; background: transparent; box-shadow: none;
+        }
+        .data-item { background: var(--panel-bg); border: 1px solid #333; padding: 5px; border-radius: 4px; text-align: center; display: flex; flex-direction: column; justify-content: center; }
+        .data-val { font-size: 1rem; font-weight: bold; display: block; }
+        .data-label { font-size: 0.5rem; color: #666; }
+
+        #warning-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(255, 0, 0, 0.2); display: none; align-items: center; justify-content: center;
+            font-size: 2rem; font-weight: bold; color: white; z-index: 9999;
+            pointer-events: none; animation: flash 0.5s infinite alternate;
+        }
+
+        @keyframes flash { from { opacity: 0; } to { opacity: 1; } }
+
+        .visualizer-h { width: 80%; height: 4px; background: #222; margin-top: 10px; position: relative; }
+        .visualizer-v { height: 50%; width: 4px; background: #222; position: absolute; right: 15px; top: 25%; }
+        
+        #lean-dot {
+            width: 10px; height: 10px; background: var(--neon-green); border-radius: 50%;
+            position: absolute; top: -3px; left: 50%; transform: translateX(-50%);
+            transition: left 0.1s linear; box-shadow: 0 0 10px var(--neon-green);
+        }
+        #pitch-dot {
+            width: 10px; height: 10px; background: var(--neon-green); border-radius: 50%;
+            position: absolute; left: -3px; top: 50%; transform: translateY(-50%);
+            transition: top 0.1s linear; box-shadow: 0 0 10px var(--neon-green);
+        }
+
+        #g-meter {
+            width: 30px; height: 30px; border: 1px solid #333; border-radius: 50%;
+            position: absolute; top: 5px; right: 10px; overflow: hidden; z-index: 21;
+        }
+        #g-ball {
+            width: 6px; height: 6px; background: var(--neon-green); border-radius: 50%;
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+        }
+
+        /* Customize Leaflet Attribution */
+        .leaflet-control-attribution { background: rgba(0,0,0,0.5) !important; color: #444 !important; font-size: 8px !important; }
+        .leaflet-bar a { background-color: #111 !important; color: var(--neon-green) !important; border-bottom: 1px solid #333 !important; }
+    </style>
+</head>
+<body>
+    <div id="start-overlay">
+        <h1 style="margin-bottom: 30px; letter-spacing: 5px;">SYSTEMS STANDBY</h1>
+        <button id="start-button" onclick="initializeSystems()">INITIALIZE HUD</button>
+        <p style="margin-top: 20px; font-size: 0.7rem; color: #555;">STAGING SENSORS & WAKE LOCK</p>
+    </div>
+
+    <div id="warning-overlay">SENSORS OFFLINE</div>
+
+    <div class="hud-container">
+        <header class="hud-block hud-header">
+            <div>HUD v3.2 // <span id="lock-status" style="color:#555">WAKE LOCK: OFF</span></div>
+            <div>
+                <button class="btn-action" id="map-btn" onclick="toggleMap()">MAP</button>
+                <button class="btn-action" onclick="calibrate()">CAL</button>
+                <button class="btn-action" id="rec-btn" onclick="toggleRecord()">REC</button>
+            </div>
+        </header>
+        
+        <div class="hud-block speed-area" onclick="resetMax()">
+            <div id="map"></div>
+            <div id="mini-speed"><span id="speed-alt">0</span> KM/H</div>
+            
+            <span class="small-label">GROUND SPEED</span>
+            <div class="speed-val" id="speed">00</div>
+            <div class="speed-unit">KM/H</div>
+            <div class="max-speed-label">MAX: <span id="max-speed">00</span></div>
+            <div id="g-meter"><div id="g-ball"></div></div>
+        </div>
+
+        <div class="hud-block lean-area">
+            <span class="small-label">ROLL / LEAN</span>
+            <div class="small-val" id="lean-val">0°</div>
+            <div class="visualizer-h"><div id="lean-dot"></div></div>
+            <div class="peak-label">PEAK: <span id="peak-lean">0</span>°</div>
+        </div>
+
+        <div class="hud-block pitch-area">
+            <span class="small-label">PITCH / GRADE</span>
+            <div class="small-val" id="pitch-val">0°</div>
+            <div class="visualizer-v"><div id="pitch-dot"></div></div>
+            <div class="peak-label">PEAK: <span id="peak-pitch">0</span>°</div>
+        </div>
+
+        <div class="hud-block compass-area">
+            <span class="small-label">HEADING</span>
+            <div class="small-val" id="heading" style="font-size: 1.5rem;">---</div>
+        </div>
+
+        <div class="data-area">
+            <div class="data-item">
+                <span class="data-val" id="alt">---</span>
+                <span class="data-label">ALTITUDE</span>
+            </div>
+            <div class="data-item">
+                <span class="data-val" id="batt">--%</span>
+                <span class="data-label">BATT <span id="batt-stat"></span></span>
+            </div>
+            <div class="data-item">
+                <span class="data-val" id="sat">--</span>
+                <span class="data-label">SATELLITES</span>
+            </div>
+            <div class="data-item">
+                <span class="data-val" id="time">00:00</span>
+                <span class="data-label">SYSTEM CLOCK</span>
+            </div>
+        </div>
+
+        <footer class="hud-block hud-footer">COORD: <span id="coords">WAITING FOR FIX...</span></footer>
+    </div>
+
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+    <script>
+        let maxSpeed = 0;
+        let peakLean = 0;
+        let peakPitch = 0;
+        let wakeLock = null;
+
+        // Calibration offsets
+        let rollOffset = parseFloat(localStorage.getItem('rollOffset')) || 0;
+        let pitchOffset = parseFloat(localStorage.getItem('pitchOffset')) || 0;
+        let rawRoll = 0, rawPitch = 0;
+
+        // Recording State
+        let isRecording = false;
+        let sessionData = [];
+
+        // Map State
+        let map = null;
+        let marker = null;
+        let isMapActive = false;
+
+        function updateClock() {
+            const now = new Date();
+            document.getElementById('time').textContent = now.getHours().toString().padStart(2, '0') + ":" + now.getMinutes().toString().padStart(2, '0');
+        }
+        setInterval(updateClock, 1000);
+
+        async function initializeSystems() {
+            await requestWakeLock();
+            if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
+                try {
+                    const permission = await DeviceOrientationEvent.requestPermission();
+                    if (permission === 'granted') startSensors();
+                } catch (err) { console.error(err); }
+            } else {
+                startSensors();
+            }
+            startGPS();
+            document.getElementById('start-overlay').style.display = 'none';
+        }
+
+        async function requestWakeLock() {
+            if ('wakeLock' in navigator) {
+                try {
+                    wakeLock = await navigator.wakeLock.request('screen');
+                    document.getElementById('lock-status').textContent = "WAKE LOCK: ACTIVE";
+                    document.getElementById('lock-status').style.color = "var(--neon-green)";
+                } catch (err) {}
+            }
+        }
+
+        function toggleMap() {
+            isMapActive = !isMapActive;
+            const mapDiv = document.getElementById('map');
+            const miniSpeed = document.getElementById('mini-speed');
+            const mapBtn = document.getElementById('map-btn');
+
+            if (isMapActive) {
+                mapDiv.style.display = 'block';
+                miniSpeed.style.display = 'block';
+                mapBtn.classList.add('active');
+                if (!map) {
+                    initMap();
+                } else {
+                    // Critical: Refresh map size calculation after showing div
+                    setTimeout(() => { 
+                        map.invalidateSize();
+                        // Force center on current marker position if available
+                        if (marker) map.setView(marker.getLatLng(), 15);
+                    }, 100);
+                }
+            } else {
+                mapDiv.style.display = 'none';
+                miniSpeed.style.display = 'none';
+                mapBtn.classList.remove('active');
+            }
+        }
+
+        function initMap() {
+            map = L.map('map', { zoomControl: false, attributionControl: true }).setView([0, 0], 15);
+            L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+                attribution: '&copy; OpenStreetMap &copy; CARTO'
+            }).addTo(map);
+            
+            // Custom Neon Marker
+            const neonIcon = L.divIcon({
+                className: 'custom-div-icon',
+                html: "<div style='background-color:var(--neon-green); width:12px; height:12px; border-radius:50%; border:2px solid white; box-shadow:0 0 10px var(--neon-green)'></div>",
+                iconSize: [12, 12],
+                iconAnchor: [6, 6]
+            });
+            marker = L.marker([0, 0], { icon: neonIcon }).addTo(map);
+        }
+
+        function calibrate() {
+            rollOffset = rawRoll;
+            pitchOffset = rawPitch;
+            localStorage.setItem('rollOffset', rollOffset);
+            localStorage.setItem('pitchOffset', pitchOffset);
+            resetMax();
+            alert("CALIBRATED");
+        }
+
+        function toggleRecord() {
+            isRecording = !isRecording;
+            const btn = document.getElementById('rec-btn');
+            if (isRecording) {
+                btn.classList.add('active');
+                sessionData = [];
+            } else {
+                btn.classList.remove('active');
+                if (sessionData.length > 0) exportGPX();
+            }
+        }
+
+        function exportGPX() {
+            let gpx = `<?xml version="1.0" encoding="UTF-8"?><gpx version="1.1" creator="ADV HUD" xmlns="http://www.topografix.com/GPX/1/1"><trk><name>ADV Session</name><trkseg>`;
+            sessionData.forEach(p => {
+                gpx += `<trkpt lat="${p.lat}" lon="${p.lon}"><ele>${p.alt || 0}</ele><time>${p.ts}</time><extensions><speed>${p.speed}</speed><roll>${p.roll}</roll><pitch>${p.pitch}</pitch></extensions></trkpt>`;
+            });
+            gpx += `</trkseg></trk></gpx>`;
+            const blob = new Blob([gpx], { type: 'application/gpx+xml' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url; a.download = `ADV_${new Date().getTime()}.gpx`;
+            document.body.appendChild(a); a.click(); document.body.removeChild(a);
+            alert("GPX EXPORTED");
+        }
+
+        function startGPS() {
+            if ("geolocation" in navigator) {
+                navigator.geolocation.watchPosition(
+                    (pos) => {
+                        document.getElementById('warning-overlay').style.display = 'none';
+                        const speedKmh = pos.coords.speed ? (pos.coords.speed * 3.6) : 0;
+                        const roundedSpeed = Math.round(speedKmh);
+                        
+                        if (speedKmh > maxSpeed) {
+                            maxSpeed = speedKmh;
+                            document.getElementById('max-speed').textContent = Math.round(maxSpeed).toString().padStart(2, '0');
+                        }
+
+                        document.getElementById('speed').textContent = roundedSpeed.toString().padStart(2, '0');
+                        document.getElementById('speed-alt').textContent = roundedSpeed;
+                        document.getElementById('alt').textContent = pos.coords.altitude ? Math.round(pos.coords.altitude) + "M" : "---";
+                        document.getElementById('coords').textContent = `${pos.coords.latitude.toFixed(4)}, ${pos.coords.longitude.toFixed(4)}`;
+                        document.getElementById('sat').textContent = "FIX";
+
+                        if (map && marker) {
+                            const latLng = [pos.coords.latitude, pos.coords.longitude];
+                            marker.setLatLng(latLng);
+                            if (isMapActive) map.panTo(latLng);
+                        }
+
+                        if (isRecording) {
+                            sessionData.push({
+                                ts: new Date().toISOString(),
+                                lat: pos.coords.latitude, lon: pos.coords.longitude,
+                                alt: pos.coords.altitude, speed: roundedSpeed,
+                                roll: Math.round(rawRoll - rollOffset), pitch: Math.round(rawPitch - pitchOffset)
+                            });
+                        }
+                    },
+                    (err) => {
+                        document.getElementById('warning-overlay').style.display = 'flex';
+                        document.getElementById('warning-overlay').textContent = "GPS ERROR: " + err.message;
+                    },
+                    { enableHighAccuracy: true }
+                );
+            }
+        }
+
+        function startSensors() {
+            window.addEventListener('deviceorientation', (event) => {
+                const orientation = window.orientation || (screen.orientation && screen.orientation.angle) || 0;
+                if (orientation === 0) { rawRoll = event.gamma; rawPitch = event.beta; }
+                else if (orientation === 90) { rawRoll = -event.beta; rawPitch = event.gamma; }
+                else if (orientation === -90 || orientation === 270) { rawRoll = event.beta; rawPitch = -event.gamma; }
+
+                const roll = rawRoll - rollOffset;
+                const pitch = rawPitch - pitchOffset;
+
+                if (roll !== null) {
+                    const absRoll = Math.abs(Math.round(roll));
+                    document.getElementById('lean-val').textContent = absRoll + "°";
+                    if (absRoll > peakLean) {
+                        peakLean = absRoll;
+                        document.getElementById('peak-lean').textContent = peakLean;
+                    }
+                    const rollPercent = ((roll + 90) / 180) * 100;
+                    document.getElementById('lean-dot').style.left = Math.max(0, Math.min(100, rollPercent)) + "%";
+                }
+
+                if (pitch !== null) {
+                    const roundedPitch = Math.round(pitch);
+                    document.getElementById('pitch-val').textContent = roundedPitch + "°";
+                    const absPitch = Math.abs(roundedPitch);
+                    if (absPitch > peakPitch) {
+                        peakPitch = absPitch;
+                        document.getElementById('peak-pitch').textContent = peakPitch;
+                    }
+                    const pitchPercent = ((-pitch + 90) / 180) * 100;
+                    document.getElementById('pitch-dot').style.top = Math.max(0, Math.min(100, pitchPercent)) + "%";
+                }
+
+                let heading = event.webkitCompassHeading || (360 - event.alpha);
+                if (heading) {
+                    const directions = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'];
+                    const index = Math.round(heading / 45) % 8;
+                    document.getElementById('heading').textContent = directions[index] + " " + Math.round(heading) + "°";
+                }
+            });
+
+            if (window.DeviceMotionEvent) {
+                window.addEventListener('devicemotion', (event) => {
+                    const acc = event.accelerationIncludingGravity;
+                    if (acc) {
+                        const x = Math.max(-50, Math.min(50, (acc.x * 5)));
+                        const y = Math.max(-50, Math.min(50, (acc.y * 5)));
+                        document.getElementById('g-ball').style.transform = `translate(calc(-50% + ${-x}px), calc(-50% + ${y}px))`;
+                    }
+                });
+            }
+        }
+
+        if ("getBattery" in navigator) {
+            navigator.getBattery().then(batt => {
+                const updateBatt = () => {
+                    document.getElementById('batt').textContent = Math.round(batt.level * 100) + "%";
+                    document.getElementById('batt-stat').textContent = batt.charging ? "⚡" : "";
+                };
+                updateBatt();
+                batt.addEventListener('levelchange', updateBatt);
+                batt.addEventListener('chargingchange', updateBatt);
+            });
+        }
+
+        function resetMax() {
+            maxSpeed = 0; peakLean = 0; peakPitch = 0;
+            document.getElementById('max-speed').textContent = "00";
+            document.getElementById('peak-lean').textContent = "0";
+            document.getElementById('peak-pitch').textContent = "0";
+        }
+
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./sw.js').then(reg => console.log('HUD SW REGISTERED'));
+            });
+        }
+    </script>
+</body>
+</html>
