@@ -1,329 +1,977 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" class="h-full bg-slate-950 text-slate-100 dark">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>ADV TACTICAL HUD</title>
-    <link rel="manifest" href="manifest.json">
-    <meta name="theme-color" content="#ffd700">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Telemetry & Trip Dashboard</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:ital,wght@0,400;0,600;0,700;1,700&family=JetBrains+Mono:wght@400;600;700;800&display=swap" rel="stylesheet">
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            cyan: '#00f0ff',
+                            orange: '#ff6b00',
+                            green: '#00ff66',
+                            red: '#ff0055',
+                            card: '#0f172a'
+                        }
+                    },
+                    fontFamily: {
+                        mono: ['"JetBrains Mono"', 'monospace'],
+                        display: ['"Chakra Petch"', 'sans-serif']
+                    }
+                }
+            }
+        }
+    </script>
     <style>
-        :root {
-            --neon-yellow: #ffd700;
-            --neon-yellow-glow: rgba(255, 215, 0, 0.4);
-            --bg-black: #050508;
-            --panel-bg: #141418;
-            --alert-red: #ff5252;
-        }
-
-        body, html {
-            margin: 0; padding: 0; height: 100dvh; width: 100%;
-            background-color: var(--bg-black); color: var(--neon-yellow);
-            font-family: 'JetBrains Mono', monospace; overflow: hidden;
-            text-transform: uppercase; font-weight: bold;
-        }
-
-        #start-overlay {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: var(--bg-black); z-index: 10000;
-            display: flex; flex-direction: column; align-items: center; justify-content: center;
-            text-align: center;
-        }
-        #start-button {
-            background: var(--neon-yellow); border: 3px solid #fff;
-            color: #000; padding: 30px 60px; font-family: inherit;
-            font-size: 2rem; font-weight: bold; cursor: pointer; box-shadow: 0 0 30px var(--neon-yellow-glow);
-            border-radius: 10px; text-transform: uppercase;
-        }
-
-        .hud-container {
-            display: grid;
-            grid-template-areas: 
-                "header"
-                "speed"
-                "lean"
-                "pitch"
-                "compass"
-                "data"
-                "footer";
-            grid-template-rows: 55px 2fr 1fr 1fr 1fr 1.2fr 40px;
-            grid-template-columns: 100%;
-            height: 98dvh; width: 100vw; box-sizing: border-box;
-            padding: 8px; gap: 8px; overflow-y: auto;
-        }
-
-        .hud-block {
-            background: var(--panel-bg); border: 2px solid var(--neon-yellow);
-            display: flex; flex-direction: column; align-items: center; justify-content: center;
-            box-shadow: 0 0 10px rgba(255, 215, 0, 0.2); border-radius: 8px;
-            position: relative; padding: 10px; min-height: 75px;
-        }
-
-        .hud-header { 
-            grid-area: header; font-size: 0.75rem; letter-spacing: 1px;
-            flex-direction: row; justify-content: space-between; padding: 0 12px;
-        }
-        .hud-footer { grid-area: footer; font-size: 0.7rem; color: #fff; background: #111; border-color: #444; min-height: 35px; }
-
-        .btn-action {
-            background: rgba(255, 215, 0, 0.2); border: 2px solid var(--neon-yellow);
-            color: var(--neon-yellow); font-family: inherit; font-size: 0.75rem; font-weight: bold;
-            padding: 8px 12px; cursor: pointer; border-radius: 6px;
-        }
-        .btn-action:active, .btn-action.active { background: var(--neon-yellow); color: black; }
+        /* Custom scrollbar & crisp graphics */
+        ::-webkit-scrollbar { width: 4px; height: 4px; }
+        ::-webkit-scrollbar-track { background: #090d16; }
+        ::-webkit-scrollbar-thumb { background: #1e293b; border-radius: 2px; }
+        ::-webkit-scrollbar-thumb:hover { background: #334155; }
         
-        #rec-btn.active { border-color: var(--alert-red); color: var(--alert-red); background: rgba(255, 82, 82, 0.3); animation: pulse 1s infinite; }
-
-        @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
-
-        .speed-area { grid-area: speed; min-height: 140px; }
-        .speed-val { font-size: 6.5rem; font-weight: bold; line-height: 1; color: #fff; text-shadow: 0 0 20px var(--neon-yellow-glow); }
-        .speed-unit { font-size: 1.2rem; color: var(--neon-yellow); margin-top: 4px; }
-        .max-speed-label { position: absolute; bottom: 8px; right: 12px; font-size: 0.8rem; color: #fff; background: #000; padding: 2px 6px; border-radius: 4px; border: 1px solid var(--neon-yellow); }
-
-        #map { width: 100%; height: 100%; position: absolute; top: 0; left: 0; z-index: 10; display: none; background: #000; border-radius: 6px; }
-        #mini-speed { position: absolute; top: 8px; left: 8px; z-index: 20; background: rgba(0,0,0,0.9); padding: 6px 12px; border: 2px solid var(--neon-yellow); font-weight: bold; font-size: 1.1rem; display: none; border-radius: 4px; color: #fff; }
-
-        .lean-area { grid-area: lean; }
-        .pitch-area { grid-area: pitch; }
-        .compass-area { grid-area: compass; }
-
-        .small-val { font-size: 2.2rem; font-weight: bold; color: #fff; }
-        .small-label { font-size: 0.7rem; position: absolute; top: 6px; left: 10px; color: var(--neon-yellow); letter-spacing: 1px; }
-        .peak-label { position: absolute; bottom: 6px; right: 10px; font-size: 0.7rem; color: #fff; background: #000; padding: 2px 6px; border-radius: 4px; border: 1px solid #555; }
-
-        .data-area { grid-area: data; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; border: none; background: transparent; box-shadow: none; padding: 0; min-height: unset; }
-        .data-item { background: var(--panel-bg); border: 2px solid var(--neon-yellow); padding: 8px; border-radius: 8px; text-align: center; display: flex; flex-direction: column; justify-content: center; }
-        .data-val { font-size: 1.1rem; font-weight: bold; display: block; color: #fff; }
-        .data-label { font-size: 0.6rem; color: var(--neon-yellow); margin-top: 2px; }
-
-        #warning-overlay {
-            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(255, 0, 0, 0.6); display: none; align-items: center; justify-content: center;
-            font-size: 1.8rem; font-weight: bold; color: white; z-index: 9999;
-            pointer-events: none; text-align: center;
+        body {
+            font-family: 'JetBrains Mono', monospace;
+            touch-action: manipulation;
+            user-select: none;
         }
 
-        .visualizer-h { width: 80%; height: 8px; background: #222; margin-top: 8px; position: relative; border-radius: 4px; border: 1px solid #444; }
-        .visualizer-v { height: 50%; width: 6px; background: #222; position: absolute; right: 15px; top: 25%; border-radius: 3px; border: 1px solid #444; }
-        #lean-dot { width: 14px; height: 14px; background: var(--neon-yellow); border-radius: 50%; position: absolute; top: -4px; left: 50%; transform: translateX(-50%); transition: left 0.1s linear; box-shadow: 0 0 10px var(--neon-yellow); border: 2px solid #fff; }
-        #pitch-dot { width: 14px; height: 14px; background: var(--neon-yellow); border-radius: 50%; position: absolute; left: -4px; top: 50%; transform: translateY(-50%); transition: top 0.1s linear; box-shadow: 0 0 10px var(--neon-yellow); border: 2px solid #fff; }
-
-        #g-meter { width: 36px; height: 36px; border: 2px solid var(--neon-yellow); border-radius: 50%; position: absolute; top: 8px; right: 8px; overflow: hidden; z-index: 21; background: rgba(0,0,0,0.8); }
-        #g-ball { width: 8px; height: 8px; background: var(--neon-yellow); border-radius: 50%; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); box-shadow: 0 0 8px var(--neon-yellow); border: 1px solid #fff; }
+        .glow-cyan { text-shadow: 0 0 12px rgba(0, 240, 255, 0.5); }
+        .glow-orange { text-shadow: 0 0 12px rgba(255, 107, 0, 0.5); }
+        .glow-green { text-shadow: 0 0 12px rgba(0, 255, 102, 0.5); }
+        
+        .box-glow { box-shadow: 0 0 20px -5px rgba(0, 240, 255, 0.15); }
+        .box-glow-orange { box-shadow: 0 0 20px -5px rgba(255, 107, 0, 0.2); }
     </style>
 </head>
-<body>
-    <div id="start-overlay">
-        <h1 style="margin-bottom: 25px; letter-spacing: 3px; color: #fff; font-size: 1.8rem;">HUD READY</h1>
-        <button id="start-button" onclick="initializeSystems()">START HUD</button>
-        <p style="margin-top: 25px; font-size: 0.8rem; color: #aaa;">SINGLE COLUMN HIGH-VISIBILITY MODE</p>
-    </div>
+<body class="h-full flex flex-col bg-slate-950 text-slate-100 overflow-hidden select-none">
 
-    <div id="warning-overlay">SENSORS OFFLINE</div>
-
-    <div class="hud-container">
-        <header class="hud-block hud-header">
-            <div>HUD v3.9 // <span id="lock-status" style="color:#aaa">WAKE: OFF</span></div>
-            <div style="display:flex; gap:6px">
-                <button class="btn-action" onclick="toggleFS()">FULL</button>
-                <button class="btn-action" id="map-btn" onclick="toggleMap()">MAP</button>
-                <button class="btn-action" onclick="calibrate()">CAL</button>
-                <button class="btn-action" id="rec-btn" onclick="toggleRecord()">REC</button>
+    <!-- TOP HEADER / STATUS BAR -->
+    <header class="bg-slate-900 border-b border-slate-800 px-4 py-2 flex justify-between items-center z-20 shrink-0">
+        <!-- Brand & GPS Indicator -->
+        <div class="flex items-center space-x-3">
+            <div class="flex items-center space-x-2 bg-slate-950 px-2.5 py-1 rounded-md border border-slate-800">
+                <div id="gps-status-dot" class="w-3 h-3 rounded-full bg-red-500 animate-pulse"></div>
+                <span id="gps-status-text" class="text-xs font-bold uppercase tracking-wider text-slate-400">Searching GPS</span>
             </div>
-        </header>
+            <span class="hidden sm:inline text-xs font-mono text-slate-500">ACCURACY: <span id="gps-accuracy" class="text-slate-300">--</span> m</span>
+        </div>
+
+        <!-- Clock & Date -->
+        <div class="text-center font-display">
+            <div id="header-time" class="text-xl sm:text-2xl font-bold tracking-widest text-brand-cyan glow-cyan leading-none">00:00:00</div>
+            <div id="header-date" class="text-[10px] text-slate-500 uppercase tracking-wider">--- -- ----</div>
+        </div>
+
+        <!-- Battery & System Status -->
+        <div class="flex items-center space-x-3">
+            <div class="flex items-center space-x-2 bg-slate-950 px-3 py-1 rounded-md border border-slate-800">
+                <i id="battery-icon" class="fa-solid fa-battery-half text-amber-400 text-sm"></i>
+                <span id="battery-level" class="text-xs font-bold text-slate-300">--%</span>
+                <i id="battery-charging" class="fa-solid fa-bolt text-brand-green text-xs hidden"></i>
+            </div>
+            <button id="btn-toggle-history" title="Trip History" class="bg-slate-800 hover:bg-slate-700 active:scale-95 text-slate-200 px-3 py-1 rounded-md border border-slate-700 text-xs font-bold flex items-center space-x-1 transition">
+                <i class="fa-solid fa-folder-open text-brand-cyan"></i>
+                <span class="hidden md:inline">HISTORY</span>
+            </button>
+        </div>
+    </header>
+
+    <!-- MAIN DASHBOARD LAYOUT -->
+    <main class="flex-1 grid grid-cols-1 lg:grid-cols-12 gap-3 p-3 overflow-y-auto lg:overflow-hidden bg-slate-950">
         
-        <div class="hud-block speed-area" onclick="resetMax()">
-            <div id="map"></div>
-            <div id="mini-speed"><span id="speed-alt">0</span> KM/H</div>
-            <span class="small-label">GROUND SPEED</span>
-            <div class="speed-val" id="speed">00</div>
-            <div class="speed-unit">KM/H</div>
-            <div class="max-speed-label">MAX: <span id="max-speed">00</span></div>
-            <div id="g-meter"><div id="g-ball"></div></div>
-        </div>
+        <!-- LEFT COLUMN: Primary Gauges & Pace Meters (5 Cols) -->
+        <section class="lg:col-span-5 flex flex-col space-y-3 h-full">
+            
+            <!-- CURRENT SPEED READOUT -->
+            <div class="bg-slate-900 border border-slate-800 rounded-xl p-4 flex flex-col justify-between relative overflow-hidden box-glow">
+                <div class="flex justify-between items-start text-xs text-slate-400 font-semibold tracking-wider uppercase">
+                    <span><i class="fa-solid fa-gauge-high text-brand-cyan mr-1.5"></i> Velocity Gauge</span>
+                    <span class="text-slate-500">MAX: <span id="val-max-speed" class="text-slate-200">0.0</span> km/h</span>
+                </div>
 
-        <div class="hud-block lean-area">
-            <span class="small-label">ROLL / LEAN</span>
-            <div class="small-val" id="lean-val">0°</div>
-            <div class="visualizer-h"><div id="lean-dot"></div></div>
-            <div class="peak-label">PEAK: <span id="peak-lean">0</span>°</div>
-        </div>
+                <div class="my-2 flex items-baseline justify-center text-center">
+                    <span id="val-current-speed" class="font-display text-7xl sm:text-8xl font-extrabold text-brand-cyan tracking-tight leading-none glow-cyan">0.0</span>
+                    <span class="text-lg font-bold text-slate-500 ml-2">KM/H</span>
+                </div>
 
-        <div class="hud-block pitch-area">
-            <span class="small-label">PITCH / GRADE</span>
-            <div class="small-val" id="pitch-val">0°</div>
-            <div class="visualizer-v"><div id="pitch-dot"></div></div>
-            <div class="peak-label">PEAK: <span id="peak-pitch">0</span>°</div>
-        </div>
+                <!-- Secondary Speed Metrics Row -->
+                <div class="grid grid-cols-2 gap-2 mt-2 pt-2 border-t border-slate-800/80 text-center">
+                    <div class="bg-slate-950/60 p-2 rounded-lg border border-slate-800">
+                        <div class="text-[10px] text-slate-400 uppercase font-semibold">Moving Avg Speed</div>
+                        <div class="text-lg font-bold text-slate-100"><span id="val-moving-avg">0.0</span> <span class="text-xs text-slate-500">km/h</span></div>
+                    </div>
+                    <div class="bg-slate-950/60 p-2 rounded-lg border border-slate-800">
+                        <div class="text-[10px] text-slate-400 uppercase font-semibold">Overall Avg Speed</div>
+                        <div class="text-lg font-bold text-slate-100"><span id="val-overall-avg">0.0</span> <span class="text-xs text-slate-500">km/h</span></div>
+                    </div>
+                </div>
+            </div>
 
-        <div class="hud-block compass-area">
-            <span class="small-label">HEADING</span>
-            <div class="small-val" id="heading" style="font-size: 1.8rem;">---</div>
-        </div>
+            <!-- PACE METERS (Rolling 1km, 5km, 10km) -->
+            <div class="bg-slate-900 border border-slate-800 rounded-xl p-3 flex-1 flex flex-col justify-between">
+                <div class="text-xs text-slate-400 font-semibold tracking-wider uppercase mb-2 flex justify-between items-center">
+                    <span><i class="fa-solid fa-stopwatch text-brand-orange mr-1.5"></i> Rolling Split Paces</span>
+                    <span class="text-[10px] text-slate-500">Recent Interval Averages</span>
+                </div>
 
-        <div class="data-area">
-            <div class="data-item"><span class="data-val" id="alt">---</span><span class="data-label">ALTITUDE</span></div>
-            <div class="data-item"><span class="data-val" id="batt">--%</span><span class="data-label">BATT <span id="batt-stat"></span></span></div>
-            <div class="data-item"><span class="data-val" id="sat">--</span><span class="data-label">SATELLITES</span></div>
-            <div class="data-item"><span class="data-val" id="time">00:00</span><span class="data-label">CLOCK</span></div>
-        </div>
+                <div class="grid grid-cols-3 gap-2 my-auto">
+                    <!-- 1KM Split -->
+                    <div class="bg-slate-950 p-2.5 rounded-lg border border-slate-800/80 flex flex-col justify-between text-center relative overflow-hidden">
+                        <div class="w-full bg-slate-800 h-1 absolute top-0 left-0">
+                            <div id="bar-1km-progress" class="bg-brand-cyan h-full w-0 transition-all"></div>
+                        </div>
+                        <span class="text-[11px] font-bold text-slate-400 mt-1">LAST 1 KM</span>
+                        <div id="pace-1km-value" class="text-xl sm:text-2xl font-bold font-display text-brand-cyan my-1">--:--</div>
+                        <span id="pace-1km-sub" class="text-[10px] text-slate-500">min/km</span>
+                    </div>
 
-        <footer class="hud-block hud-footer">COORD: <span id="coords">WAITING...</span></footer>
+                    <!-- 5KM Split -->
+                    <div class="bg-slate-950 p-2.5 rounded-lg border border-slate-800/80 flex flex-col justify-between text-center relative overflow-hidden">
+                        <div class="w-full bg-slate-800 h-1 absolute top-0 left-0">
+                            <div id="bar-5km-progress" class="bg-brand-orange h-full w-0 transition-all"></div>
+                        </div>
+                        <span class="text-[11px] font-bold text-slate-400 mt-1">LAST 5 KM</span>
+                        <div id="pace-5km-value" class="text-xl sm:text-2xl font-bold font-display text-brand-orange my-1">--:--</div>
+                        <span id="pace-5km-sub" class="text-[10px] text-slate-500">min/km</span>
+                    </div>
+
+                    <!-- 10KM Split -->
+                    <div class="bg-slate-950 p-2.5 rounded-lg border border-slate-800/80 flex flex-col justify-between text-center relative overflow-hidden">
+                        <div class="w-full bg-slate-800 h-1 absolute top-0 left-0">
+                            <div id="bar-10km-progress" class="bg-brand-green h-full w-0 transition-all"></div>
+                        </div>
+                        <span class="text-[11px] font-bold text-slate-400 mt-1">LAST 10 KM</span>
+                        <div id="pace-10km-value" class="text-xl sm:text-2xl font-bold font-display text-brand-green my-1">--:--</div>
+                        <span id="pace-10km-sub" class="text-[10px] text-slate-500">min/km</span>
+                    </div>
+                </div>
+                
+                <div class="text-[10px] text-slate-500 text-center mt-2">
+                    Calculated automatically as distance accumulates.
+                </div>
+            </div>
+
+            <!-- TIME & DURATION METRICS -->
+            <div class="grid grid-cols-3 gap-2">
+                <div class="bg-slate-900 border border-slate-800 rounded-lg p-2.5 text-center">
+                    <div class="text-[10px] text-slate-400 uppercase font-semibold">Total Distance</div>
+                    <div class="text-lg font-bold text-slate-100 mt-0.5"><span id="val-total-dist">0.00</span> <span class="text-xs text-slate-500">km</span></div>
+                </div>
+                <div class="bg-slate-900 border border-slate-800 rounded-lg p-2.5 text-center">
+                    <div class="text-[10px] text-slate-400 uppercase font-semibold">Moving Time</div>
+                    <div id="val-moving-time" class="text-lg font-bold text-brand-green mt-0.5">00:00:00</div>
+                </div>
+                <div class="bg-slate-900 border border-slate-800 rounded-lg p-2.5 text-center">
+                    <div class="text-[10px] text-slate-400 uppercase font-semibold">Stationary Time</div>
+                    <div id="val-idle-time" class="text-lg font-bold text-amber-400 mt-0.5">00:00:00</div>
+                </div>
+            </div>
+
+        </section>
+
+        <!-- RIGHT COLUMN: Altitude Telemetry & Graphic Profile (7 Cols) -->
+        <section class="lg:col-span-7 flex flex-col space-y-3 h-full">
+            
+            <!-- ALTITUDE MONITOR & REAL-TIME GRAPH -->
+            <div class="bg-slate-900 border border-slate-800 rounded-xl p-4 flex-1 flex flex-col justify-between relative box-glow-orange min-h-[300px]">
+                
+                <!-- Graph Header Stats -->
+                <div class="flex flex-wrap justify-between items-center gap-2 mb-2">
+                    <div class="flex items-center space-x-2">
+                        <i class="fa-solid fa-mountain text-brand-orange"></i>
+                        <span class="text-xs font-semibold text-slate-300 uppercase tracking-wider">Altitude Logging (1s Sample Rate)</span>
+                    </div>
+                    
+                    <div class="flex items-center space-x-4 text-xs">
+                        <div><span class="text-slate-500">CURR:</span> <span id="val-alt-curr" class="font-bold text-brand-orange">0</span> <span class="text-slate-500">m</span></div>
+                        <div><span class="text-slate-500">MIN:</span> <span id="val-alt-min" class="font-bold text-slate-300">0</span> <span class="text-slate-500">m</span></div>
+                        <div><span class="text-slate-500">MAX:</span> <span id="val-alt-max" class="font-bold text-slate-300">0</span> <span class="text-slate-500">m</span></div>
+                        <div><span class="text-slate-500">GAIN:</span> <span id="val-alt-gain" class="font-bold text-brand-green">0</span> <span class="text-slate-500">m</span></div>
+                    </div>
+                </div>
+
+                <!-- Canvas Dynamic Graph Container -->
+                <div class="relative flex-1 w-full bg-slate-950 border border-slate-800/80 rounded-lg overflow-hidden my-2 min-h-[180px]">
+                    <canvas id="altitude-canvas" class="w-full h-full block"></canvas>
+                    <div id="graph-empty-notice" class="absolute inset-0 flex items-center justify-center text-slate-600 text-xs font-mono">
+                        Awaiting elevation data stream...
+                    </div>
+                </div>
+
+                <!-- Graph Footer / Controls -->
+                <div class="flex justify-between items-center text-[10px] text-slate-500">
+                    <span id="graph-samples-count">Logged Samples: 0</span>
+                    <span class="flex items-center space-x-1">
+                        <span class="w-2 h-2 rounded-full bg-brand-orange inline-block"></span>
+                        <span>Altitude Profile</span>
+                    </span>
+                </div>
+            </div>
+
+            <!-- ACTION CONTROL BAR -->
+            <div class="bg-slate-900 border border-slate-800 rounded-xl p-3 flex flex-wrap gap-2 items-center justify-between">
+                
+                <!-- Main Action: SAVE & START NEW TRIP -->
+                <button id="btn-save-new" class="flex-1 min-w-[200px] bg-gradient-to-r from-brand-orange to-amber-600 hover:from-orange-500 hover:to-amber-500 text-slate-950 font-display font-extrabold text-base py-3 px-4 rounded-lg shadow-lg active:scale-98 transition flex items-center justify-center space-x-2">
+                    <i class="fa-solid fa-floppy-disk text-lg"></i>
+                    <span>SAVE & START NEW TRIP</span>
+                </button>
+
+                <!-- Auxiliary Controls -->
+                <div class="flex items-center space-x-2 w-full sm:w-auto">
+                    <button id="btn-pause-toggle" class="flex-1 sm:flex-none bg-slate-800 hover:bg-slate-700 text-slate-200 px-4 py-3 rounded-lg border border-slate-700 font-bold text-xs flex items-center justify-center space-x-1.5 transition">
+                        <i id="pause-icon" class="fa-solid fa-pause text-amber-400"></i>
+                        <span id="pause-text">PAUSE</span>
+                    </button>
+                    <button id="btn-export-gpx" class="flex-1 sm:flex-none bg-slate-800 hover:bg-slate-700 text-slate-200 px-4 py-3 rounded-lg border border-slate-700 font-bold text-xs flex items-center justify-center space-x-1.5 transition">
+                        <i class="fa-solid fa-file-export text-brand-cyan"></i>
+                        <span>EXPORT GPX</span>
+                    </button>
+                </div>
+            </div>
+
+        </section>
+    </main>
+
+    <!-- TRIP HISTORY & ARCHIVE MODAL -->
+    <div id="modal-history" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-slate-900 border border-slate-800 rounded-xl max-w-3xl w-full max-h-[85vh] flex flex-col shadow-2xl overflow-hidden">
+            <!-- Modal Header -->
+            <div class="p-4 border-b border-slate-800 flex justify-between items-center bg-slate-950">
+                <h3 class="font-display font-bold text-lg text-brand-cyan flex items-center space-x-2">
+                    <i class="fa-solid fa-clock-rotate-left"></i>
+                    <span>SAVED TRIP ARCHIVE</span>
+                </h3>
+                <button id="btn-close-modal" class="text-slate-400 hover:text-slate-100 p-1">
+                    <i class="fa-solid fa-xmark text-xl"></i>
+                </button>
+            </div>
+
+            <!-- Modal Content List -->
+            <div id="history-list" class="p-4 overflow-y-auto flex-1 space-y-3">
+                <!-- Dynamically Inserted Trips -->
+            </div>
+
+            <!-- Modal Footer -->
+            <div class="p-3 border-t border-slate-800 bg-slate-950 flex justify-between items-center">
+                <button id="btn-clear-history" class="text-xs text-red-400 hover:text-red-300 font-bold">CLEAR ALL HISTORY</button>
+                <span class="text-[10px] text-slate-500">Stored locally on your browser</span>
+            </div>
+        </div>
     </div>
 
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+    <!-- NOTIFICATION TOAST -->
+    <div id="toast" class="fixed bottom-6 right-6 bg-brand-cyan text-slate-950 font-bold px-4 py-2.5 rounded-lg shadow-xl z-50 transform translate-y-20 opacity-0 transition-all duration-300 flex items-center space-x-2">
+        <i id="toast-icon" class="fa-solid fa-check-circle"></i>
+        <span id="toast-msg">Trip auto-saved successfully</span>
+    </div>
+
+    <!-- MAIN SYSTEM APPLICATION LOGIC -->
     <script>
-        function getRotationMatrix(alpha, beta, gamma) {
-            const _x = (beta || 0) * Math.PI / 180, _y = (gamma || 0) * Math.PI / 180, _z = (alpha || 0) * Math.PI / 180;
-            const cX = Math.cos(_x), sX = Math.sin(_x), cY = Math.cos(_y), sY = Math.sin(_y), cZ = Math.cos(_z), sZ = Math.sin(_z);
-            return [[cY*cZ-sX*sY*sZ, -cX*sZ, cZ*sY+cY*sX*sZ], [cZ*sX*sY+cY*sZ, cX*cZ, sY*sZ-cY*cZ*sX], [-cX*sY, sX, cX*cY]];
-        }
-        function multiply(A,B) {
-            let C = [[0,0,0],[0,0,0],[0,0,0]];
-            for(let i=0; i<3; i++) for(let j=0; j<3; j++) for(let k=0; k<3; k++) C[i][j] += A[i][k] * B[k][j];
-            return C;
-        }
-        function transpose(A) { return [[A[0][0], A[1][0], A[2][0]], [A[0][1], A[1][1], A[2][1]], [A[0][2], A[1][2], A[2][2]]]; }
+        /**
+         * TELEMETRY TRIP RECORDER SYSTEM
+         * High accuracy telemetry calculator and 1-second sample logger
+         */
 
-        let maxSpeed = 0, peakLean = 0, peakPitch = 0, wakeLock = null;
-        let isRecording = false, sessionData = [], isMapActive = false, map = null, marker = null;
-        let currentA=0, currentB=0, currentG=0, smoothRoll=0, smoothPitch=0;
-        const K = 0.15;
-        let mCalibInv = [[1,0,0],[0,1,0],[0,0,1]];
-        try { let saved = localStorage.getItem('mCalibInv'); if (saved) mCalibInv = JSON.parse(saved); } catch(e) {}
+        // App State Container
+        const state = {
+            isRecording: true,
+            isPaused: false,
+            gpsLocked: false,
+            lastPosition: null,
+            startTime: Date.now(),
+            totalDistanceKm: 0,
+            movingTimeSec: 0,
+            idleTimeSec: 0,
+            maxSpeedKmh: 0,
+            currentSpeedKmh: 0,
+            
+            // Altitude Tracking
+            currentAltitude: 0,
+            minAltitude: null,
+            maxAltitude: null,
+            altitudeGain: 0,
+            altitudeHistory: [], // Array of { timestamp, elevation, speed }
+            
+            // Location History for rolling splits & GPX
+            trackPoints: [], // Array of { lat, lon, ele, time, speed }
+            
+            // Auto Save Throttle Timer
+            lastAutoSave: Date.now()
+        };
 
-        function updateClock() {
-            const now = new Date();
-            document.getElementById('time').textContent = now.getHours().toString().padStart(2, '0') + ":" + now.getMinutes().toString().padStart(2, '0');
+        // DOM Element Registry
+        const ui = {
+            // Header
+            time: document.getElementById('header-time'),
+            date: document.getElementById('header-date'),
+            gpsDot: document.getElementById('gps-status-dot'),
+            gpsText: document.getElementById('gps-status-text'),
+            gpsAccuracy: document.getElementById('gps-accuracy'),
+            batteryLevel: document.getElementById('battery-level'),
+            batteryIcon: document.getElementById('battery-icon'),
+            batteryCharging: document.getElementById('battery-charging'),
+
+            // Speed & Core Stats
+            currSpeed: document.getElementById('val-current-speed'),
+            maxSpeed: document.getElementById('val-max-speed'),
+            movingAvg: document.getElementById('val-moving-avg'),
+            overallAvg: document.getElementById('val-overall-avg'),
+            totalDist: document.getElementById('val-total-dist'),
+            movingTime: document.getElementById('val-moving-time'),
+            idleTime: document.getElementById('val-idle-time'),
+
+            // Rolling Paces
+            pace1kmVal: document.getElementById('pace-1km-value'),
+            pace1kmSub: document.getElementById('pace-1km-sub'),
+            bar1km: document.getElementById('bar-1km-progress'),
+            
+            pace5kmVal: document.getElementById('pace-5km-value'),
+            pace5kmSub: document.getElementById('pace-5km-sub'),
+            bar5km: document.getElementById('bar-5km-progress'),
+            
+            pace10kmVal: document.getElementById('pace-10km-value'),
+            pace10kmSub: document.getElementById('pace-10km-sub'),
+            bar10km: document.getElementById('bar-10km-progress'),
+
+            // Altitude
+            altCurr: document.getElementById('val-alt-curr'),
+            altMin: document.getElementById('val-alt-min'),
+            altMax: document.getElementById('val-alt-max'),
+            altGain: document.getElementById('val-alt-gain'),
+            samplesCount: document.getElementById('graph-samples-count'),
+            canvas: document.getElementById('altitude-canvas'),
+            emptyNotice: document.getElementById('graph-empty-notice'),
+
+            // Controls & Modals
+            btnSaveNew: document.getElementById('btn-save-new'),
+            btnPause: document.getElementById('btn-pause-toggle'),
+            pauseIcon: document.getElementById('pause-icon'),
+            pauseText: document.getElementById('pause-text'),
+            btnExportGpx: document.getElementById('btn-export-gpx'),
+            btnToggleHistory: document.getElementById('btn-toggle-history'),
+            modalHistory: document.getElementById('modal-history'),
+            btnCloseModal: document.getElementById('btn-close-modal'),
+            btnClearHistory: document.getElementById('btn-clear-history'),
+            historyList: document.getElementById('history-list'),
+            toast: document.getElementById('toast'),
+            toastMsg: document.getElementById('toast-msg')
+        };
+
+        // Canvas 2D Context
+        const ctx = ui.canvas.getContext('2d');
+
+        // ==========================================
+        // 1. INITIALIZATION & LIFECYCLE
+        // ==========================================
+        window.addEventListener('DOMContentLoaded', () => {
+            initClock();
+            initBattery();
+            initCanvas();
+            loadActiveSession();
+            initGPS();
+            
+            // 1-Second Master Telemetry Interval Loop
+            setInterval(masterTelemetryLoop, 1000);
+
+            // Setup UI Events
+            ui.btnSaveNew.addEventListener('click', saveAndStartNewTrip);
+            ui.btnPause.addEventListener('click', togglePause);
+            ui.btnExportGpx.addEventListener('click', () => exportCurrentTripGPX());
+            ui.btnToggleHistory.addEventListener('click', () => { renderHistoryList(); ui.modalHistory.classList.remove('hidden'); });
+            ui.btnCloseModal.addEventListener('click', () => ui.modalHistory.classList.add('hidden'));
+            ui.btnClearHistory.addEventListener('click', clearAllHistory);
+            
+            window.addEventListener('resize', resizeCanvas);
+        });
+
+        // ==========================================
+        // 2. CLOCK & BATTERY STATUS
+        // ==========================================
+        function initClock() {
+            function update() {
+                const now = new Date();
+                ui.time.textContent = now.toTimeString().split(' ')[0];
+                ui.date.textContent = now.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
+            }
+            update();
+            setInterval(update, 1000);
         }
-        setInterval(updateClock, 1000);
 
-        async function initializeSystems() {
-            document.getElementById('start-overlay').style.display = 'none';
-            if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
-                try {
-                    const permission = await DeviceOrientationEvent.requestPermission();
-                    if (permission === 'granted') startSensors();
-                } catch (err) {}
-            } else { startSensors(); }
-            startGPS();
-            requestWakeLock();
-        }
+        function initBattery() {
+            if ('getBattery' in navigator) {
+                navigator.getBattery().then(battery => {
+                    function updateBattery() {
+                        const level = Math.round(battery.level * 100);
+                        ui.batteryLevel.textContent = `${level}%`;
+                        ui.batteryCharging.classList.toggle('hidden', !battery.charging);
 
-        async function requestWakeLock() {
-            if ('wakeLock' in navigator) {
-                try {
-                    wakeLock = await navigator.wakeLock.request('screen');
-                    document.getElementById('lock-status').textContent = "WAKE: ON";
-                    document.getElementById('lock-status').style.color = "var(--neon-yellow)";
-                } catch (err) {}
+                        // Icon logic based on percentage
+                        if (battery.level > 0.8) ui.batteryIcon.className = "fa-solid fa-battery-full text-brand-green text-sm";
+                        else if (battery.level > 0.4) ui.batteryIcon.className = "fa-solid fa-battery-half text-amber-400 text-sm";
+                        else ui.batteryIcon.className = "fa-solid fa-battery-quarter text-brand-red text-sm";
+                    }
+                    updateBattery();
+                    battery.addEventListener('levelchange', updateBattery);
+                    battery.addEventListener('chargingchange', updateBattery);
+                }).catch(() => {
+                    ui.batteryLevel.textContent = "N/A";
+                });
+            } else {
+                ui.batteryLevel.textContent = "N/A";
             }
         }
 
-        function toggleFS() {
-            const doc = document.documentElement;
-            if (!document.fullscreenElement) { if (doc.requestFullscreen) doc.requestFullscreen(); }
-            else { if (document.exitFullscreen) document.exitFullscreen(); }
+        // ==========================================
+        // 3. GEOLOCATION & SPEED CALCULATION
+        // ==========================================
+        function initGPS() {
+            if (!("geolocation" in navigator)) {
+                ui.gpsText.textContent = "GPS UNSUPPORTED";
+                showToast("Geolocation is not supported by your browser");
+                return;
+            }
+
+            const options = {
+                enableHighAccuracy: true,
+                timeout: 10000,
+                maximumAge: 0
+            };
+
+            navigator.geolocation.watchPosition(onGPSPosition, onGPSError, options);
         }
 
-        function toggleMap() {
-            isMapActive = !isMapActive;
-            const mapDiv = document.getElementById('map'), miniSpeed = document.getElementById('mini-speed'), mapBtn = document.getElementById('map-btn');
-            if (isMapActive) {
-                mapDiv.style.display = 'block'; miniSpeed.style.display = 'block'; mapBtn.classList.add('active');
-                if (!map) {
-                    map = L.map('map', { zoomControl: false, attributionControl: false }).setView([0, 0], 15);
-                    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {}).addTo(map);
-                    marker = L.marker([0, 0], { icon: L.divIcon({ className: 'custom-div-icon', html: "<div style='background-color:var(--neon-yellow); width:14px; height:14px; border-radius:50%; border:2px solid white; box-shadow:0 0 12px var(--neon-yellow)'></div>", iconSize: [14, 14] }) }).addTo(map);
+        function onGPSPosition(pos) {
+            if (state.isPaused) return;
+
+            const coords = pos.coords;
+            state.gpsLocked = true;
+            ui.gpsDot.className = "w-3 h-3 rounded-full bg-brand-green shadow-[0_0_8px_#00ff66]";
+            ui.gpsText.textContent = "GPS LOCKED";
+            ui.gpsAccuracy.textContent = Math.round(coords.accuracy);
+
+            const timestamp = pos.timestamp || Date.now();
+            const rawSpeed = coords.speed !== null && !isNaN(coords.speed) ? coords.speed * 3.6 : 0; // m/s to km/h
+            state.currentSpeedKmh = rawSpeed > 0.8 ? rawSpeed : 0; // Filter low noise drift
+
+            if (state.currentSpeedKmh > state.maxSpeedKmh) {
+                state.maxSpeedKmh = state.currentSpeedKmh;
+            }
+
+            // Altitude Processing
+            if (coords.altitude !== null && !isNaN(coords.altitude)) {
+                const alt = Math.round(coords.altitude);
+                if (state.minAltitude === null || alt < state.minAltitude) state.minAltitude = alt;
+                if (state.maxAltitude === null || alt > state.maxAltitude) state.maxAltitude = alt;
+
+                // Calculate elevation gain
+                if (state.currentAltitude !== 0 && alt > state.currentAltitude) {
+                    const diff = alt - state.currentAltitude;
+                    if (diff > 1 && diff < 50) { // filter spikes
+                        state.altitudeGain += diff;
+                    }
                 }
-                setTimeout(() => map.invalidateSize(), 200);
-            } else { mapDiv.style.display = 'none'; miniSpeed.style.display = 'none'; mapBtn.classList.remove('active'); }
+                state.currentAltitude = alt;
+            }
+
+            // Distance Traveled Calculation (Haversine Formula)
+            if (state.lastPosition) {
+                const distDelta = calculateHaversine(
+                    state.lastPosition.lat, state.lastPosition.lon,
+                    coords.latitude, coords.longitude
+                );
+                
+                // Ignore unrealistic teleportation jumps (>150 km/h single delta check)
+                if (distDelta > 0.001 && distDelta < 0.5) {
+                    state.totalDistanceKm += distDelta;
+                }
+            }
+
+            state.lastPosition = { lat: coords.latitude, lon: coords.longitude };
+
+            // Log trackpoint
+            state.trackPoints.push({
+                lat: coords.latitude,
+                lon: coords.longitude,
+                ele: state.currentAltitude,
+                speed: state.currentSpeedKmh,
+                dist: state.totalDistanceKm,
+                time: timestamp
+            });
         }
 
-        function calibrate() {
-            const mCurrent = getRotationMatrix(currentA, currentB, currentG);
-            mCalibInv = transpose(mCurrent);
-            localStorage.setItem('mCalibInv', JSON.stringify(mCalibInv));
-            resetMax();
-            alert("ZEROED");
+        function onGPSError(err) {
+            state.gpsLocked = false;
+            ui.gpsDot.className = "w-3 h-3 rounded-full bg-red-500 animate-pulse";
+            ui.gpsText.textContent = "GPS SEARCHING";
+            ui.gpsAccuracy.textContent = "--";
         }
 
-        function startGPS() {
-            if ("geolocation" in navigator) {
-                navigator.geolocation.watchPosition((pos) => {
-                    document.getElementById('warning-overlay').style.display = 'none';
-                    const speedKmh = pos.coords.speed ? (pos.coords.speed * 3.6) : 0;
-                    const rSpeed = Math.round(speedKmh);
-                    if (speedKmh > maxSpeed) { maxSpeed = speedKmh; document.getElementById('max-speed').textContent = Math.round(maxSpeed).toString().padStart(2, '0'); }
-                    document.getElementById('speed').textContent = rSpeed.toString().padStart(2, '0');
-                    document.getElementById('speed-alt').textContent = rSpeed;
-                    document.getElementById('alt').textContent = pos.coords.altitude ? Math.round(pos.coords.altitude) + "M" : "---";
-                    document.getElementById('coords').textContent = `${pos.coords.latitude.toFixed(4)}, ${pos.coords.longitude.toFixed(4)}`;
-                    document.getElementById('sat').textContent = "FIX";
-                    if (map && marker) { marker.setLatLng([pos.coords.latitude, pos.coords.longitude]); if (isMapActive) map.panTo([pos.coords.latitude, pos.coords.longitude]); }
-                    if (isRecording) { sessionData.push({ ts: new Date().toISOString(), lat: pos.coords.latitude, lon: pos.coords.longitude, alt: pos.coords.altitude, speed: rSpeed, roll: Math.round(smoothRoll), pitch: Math.round(smoothPitch) }); }
-                }, (err) => { document.getElementById('warning-overlay').style.display = 'block'; document.getElementById('warning-overlay').textContent = "GPS ERROR: " + err.message; }, { enableHighAccuracy: true });
+        // Haversine formula for spherical distance in KM
+        function calculateHaversine(lat1, lon1, lat2, lon2) {
+            const R = 6371; // Earth radius km
+            const dLat = (lat2 - lat1) * Math.PI / 180;
+            const dLon = (lon2 - lon1) * Math.PI / 180;
+            const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+                      Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+                      Math.sin(dLon / 2) * Math.sin(dLon / 2);
+            const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+            return R * c;
+        }
+
+        // ==========================================
+        // 4. MASTER 1-SECOND TELEMETRY LOOP
+        // ==========================================
+        function masterTelemetryLoop() {
+            if (state.isPaused) return;
+
+            // 1. Update Durations
+            if (state.currentSpeedKmh > 1.5) {
+                state.movingTimeSec++;
+            } else {
+                state.idleTimeSec++;
+            }
+
+            // 2. Log 1-Second Altitude History
+            state.altitudeHistory.push({
+                time: Date.now(),
+                alt: state.currentAltitude,
+                dist: state.totalDistanceKm
+            });
+
+            // Keep array size optimized for performance (Max 7200 points = 2 hours high detail)
+            if (state.altitudeHistory.length > 7200) {
+                state.altitudeHistory.shift();
+            }
+
+            // 3. Render Dashboard Displays
+            renderDashboard();
+
+            // 4. Render Altitude Canvas Graph
+            renderAltitudeGraph();
+
+            // 5. Continuous Auto-Save to LocalStorage (throttled every 5s)
+            if (Date.now() - state.lastAutoSave > 5000) {
+                autoSaveActiveSession();
+                state.lastAutoSave = Date.now();
             }
         }
 
-        function startSensors() {
-            window.addEventListener('deviceorientation', (event) => {
-                currentA = event.alpha || 0; currentB = event.beta || 0; currentG = event.gamma || 0;
-                const mCurrent = getRotationMatrix(currentA, currentB, currentG), mRel = multiply(mCurrent, mCalibInv);
-                let rawR = Math.atan2(-mRel[2][0], mRel[2][2]) * 180 / Math.PI, rawP = Math.asin(Math.max(-1, Math.min(1, mRel[2][1]))) * 180 / Math.PI;
-                const orient = (screen.orientation && screen.orientation.angle) || window.orientation || 0;
-                let finalR, finalP;
-                if (orient === 90) { finalR = -rawP; finalP = rawR; }
-                else if (orient === -90 || orient === 270) { finalR = rawP; finalP = -rawR; }
-                else { finalR = rawR; finalP = rawP; }
-                smoothRoll = (K * finalR) + ((1 - K) * smoothRoll); smoothPitch = (K * finalP) + ((1 - K) * smoothPitch);
-                const absR = Math.abs(Math.round(smoothRoll));
-                document.getElementById('lean-val').textContent = absR + "°";
-                if (absR > peakLean) { peakLean = absR; document.getElementById('peak-lean').textContent = peakLean; }
-                document.getElementById('lean-dot').style.left = Math.max(0, Math.min(100, ((smoothRoll+90)/180)*100)) + "%";
-                const roundP = Math.round(smoothPitch);
-                document.getElementById('pitch-val').textContent = roundP + "°";
-                if (Math.abs(roundP) > peakPitch) { peakPitch = Math.abs(roundP); document.getElementById('peak-pitch').textContent = peakPitch; }
-                document.getElementById('pitch-dot').style.top = Math.max(0, Math.min(100, ((-smoothPitch+90)/180)*100)) + "%";
-                let heading = event.webkitCompassHeading || (360 - event.alpha);
-                if (heading) { const directions = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW']; document.getElementById('heading').textContent = directions[Math.round(heading/45)%8] + " " + Math.round(heading) + "°"; }
-            });
-            window.addEventListener('devicemotion', (event) => {
-                const acc = event.accelerationIncludingGravity;
-                if (acc) { const x = Math.max(-50, Math.min(50, (acc.x*5))), y = Math.max(-50, Math.min(50, (acc.y*5))); document.getElementById('g-ball').style.transform = `translate(calc(-50% + ${-x}px), calc(-50% + ${y}px))`; }
+        function renderDashboard() {
+            // Speed UI
+            ui.currSpeed.textContent = state.currentSpeedKmh.toFixed(1);
+            ui.maxSpeed.textContent = state.maxSpeedKmh.toFixed(1);
+
+            // Averages
+            const totalTimeHours = (state.movingTimeSec + state.idleTimeSec) / 3600;
+            const movingTimeHours = state.movingTimeSec / 3600;
+
+            const movingAvg = movingTimeHours > 0 ? (state.totalDistanceKm / movingTimeHours) : 0;
+            const overallAvg = totalTimeHours > 0 ? (state.totalDistanceKm / totalTimeHours) : 0;
+
+            ui.movingAvg.textContent = movingAvg.toFixed(1);
+            ui.overallAvg.textContent = overallAvg.toFixed(1);
+
+            // Distance & Timers
+            ui.totalDist.textContent = state.totalDistanceKm.toFixed(2);
+            ui.movingTime.textContent = formatDuration(state.movingTimeSec);
+            ui.idleTime.textContent = formatDuration(state.idleTimeSec);
+
+            // Altitudes
+            ui.altCurr.textContent = state.currentAltitude;
+            ui.altMin.textContent = state.minAltitude !== null ? state.minAltitude : 0;
+            ui.altMax.textContent = state.maxAltitude !== null ? state.maxAltitude : 0;
+            ui.altGain.textContent = state.altitudeGain;
+
+            // Compute Rolling Paces
+            calculateRollingPaces();
+        }
+
+        // ==========================================
+        // 5. ROLLING PACE METERS (1km, 5km, 10km)
+        // ==========================================
+        function calculateRollingPaces() {
+            const currentDist = state.totalDistanceKm;
+            const pts = state.trackPoints;
+
+            updatePaceSplit(1, currentDist, pts, ui.pace1kmVal, ui.pace1kmSub, ui.bar1km);
+            updatePaceSplit(5, currentDist, pts, ui.pace5kmVal, ui.pace5kmSub, ui.bar5km);
+            updatePaceSplit(10, currentDist, pts, ui.pace10kmVal, ui.pace10kmSub, ui.bar10km);
+        }
+
+        function updatePaceSplit(targetKm, currentDist, pts, valEl, subEl, barEl) {
+            // Progress Bar
+            const progressRatio = Math.min(1, currentDist / targetKm);
+            barEl.style.width = `${progressRatio * 100}%`;
+
+            if (currentDist < targetKm || pts.length < 2) {
+                valEl.textContent = "--:--";
+                subEl.textContent = `${(currentDist).toFixed(1)} / ${targetKm} km`;
+                return;
+            }
+
+            // Find point in history where distance was (currentDist - targetKm)
+            const targetDistancePoint = currentDist - targetKm;
+            let pastPoint = null;
+
+            for (let i = pts.length - 1; i >= 0; i--) {
+                if (pts[i].dist <= targetDistancePoint) {
+                    pastPoint = pts[i];
+                    break;
+                }
+            }
+
+            if (!pastPoint) {
+                pastPoint = pts[0]; // fallback to start
+            }
+
+            const timeDiffSec = (Date.now() - pastPoint.time) / 1000;
+            if (timeDiffSec <= 0) return;
+
+            // Calculate Pace (Pace in min/km = time in minutes / distance in km)
+            const paceMinPerKm = (timeDiffSec / 60) / targetKm;
+
+            // If speed is very high (motorcycle/car), show km/h average for interval instead of min/km
+            const avgSpeedInterval = targetKm / (timeDiffSec / 3600);
+
+            if (avgSpeedInterval > 25) {
+                valEl.textContent = avgSpeedInterval.toFixed(1);
+                subEl.textContent = "avg km/h";
+            } else {
+                // Formatting min:sec / km
+                const mins = Math.floor(paceMinPerKm);
+                const secs = Math.round((paceMinPerKm - mins) * 60);
+                const formattedSecs = secs < 10 ? `0${secs}` : secs;
+                valEl.textContent = `${mins}:${formattedSecs}`;
+                subEl.textContent = "min/km";
+            }
+        }
+
+        // ==========================================
+        // 6. ALTITUDE PROFILE CANVAS GRAPH
+        // ==========================================
+        function initCanvas() {
+            resizeCanvas();
+        }
+
+        function resizeCanvas() {
+            const rect = ui.canvas.parentElement.getBoundingClientRect();
+            ui.canvas.width = rect.width * window.devicePixelRatio;
+            ui.canvas.height = rect.height * window.devicePixelRatio;
+            renderAltitudeGraph();
+        }
+
+        function renderAltitudeGraph() {
+            const data = state.altitudeHistory;
+            ui.samplesCount.textContent = `Logged Samples: ${data.length}`;
+
+            if (data.length < 2) {
+                ui.emptyNotice.classList.remove('hidden');
+                return;
+            } else {
+                ui.emptyNotice.classList.add('hidden');
+            }
+
+            const w = ui.canvas.width;
+            const h = ui.canvas.height;
+
+            ctx.clearRect(0, 0, w, h);
+
+            // Compute Bounds
+            let minAlt = Infinity;
+            let maxAlt = -Infinity;
+
+            for (let i = 0; i < data.length; i++) {
+                if (data[i].alt < minAlt) minAlt = data[i].alt;
+                if (data[i].alt > maxAlt) maxAlt = data[i].alt;
+            }
+
+            // Add margin padding to altitude axis
+            minAlt = Math.max(0, minAlt - 10);
+            maxAlt = maxAlt + 15;
+            if (minAlt === maxAlt) maxAlt += 20;
+
+            const altRange = maxAlt - minAlt;
+
+            // Grid Lines Background
+            ctx.strokeStyle = '#1e293b';
+            ctx.lineWidth = 1;
+            const gridLines = 4;
+            for (let i = 0; i <= gridLines; i++) {
+                const y = (h / gridLines) * i;
+                ctx.beginPath();
+                ctx.moveTo(0, y);
+                ctx.lineTo(w, y);
+                ctx.stroke();
+            }
+
+            // Plot Gradient Fill Area
+            const gradient = ctx.createLinearGradient(0, 0, 0, h);
+            gradient.addColorStop(0, 'rgba(255, 107, 0, 0.4)');
+            gradient.addColorStop(1, 'rgba(255, 107, 0, 0.0)');
+
+            ctx.beginPath();
+            ctx.moveTo(0, h);
+
+            for (let i = 0; i < data.length; i++) {
+                const x = (i / (data.length - 1)) * w;
+                const normalizedAlt = (data[i].alt - minAlt) / altRange;
+                const y = h - (normalizedAlt * h);
+                ctx.lineTo(x, y);
+            }
+
+            ctx.lineTo(w, h);
+            ctx.closePath();
+            ctx.fillStyle = gradient;
+            ctx.fill();
+
+            // Plot Elevation Stroke Line
+            ctx.beginPath();
+            for (let i = 0; i < data.length; i++) {
+                const x = (i / (data.length - 1)) * w;
+                const normalizedAlt = (data[i].alt - minAlt) / altRange;
+                const y = h - (normalizedAlt * h);
+
+                if (i === 0) ctx.moveTo(x, y);
+                else ctx.lineTo(x, y);
+            }
+            ctx.strokeStyle = '#ff6b00';
+            ctx.lineWidth = 3 * window.devicePixelRatio;
+            ctx.stroke();
+
+            // Current Position Indicator Dot
+            if (data.length > 0) {
+                const lastIdx = data.length - 1;
+                const lastX = w;
+                const lastY = h - (((data[lastIdx].alt - minAlt) / altRange) * h);
+
+                ctx.beginPath();
+                ctx.arc(lastX - 4, lastY, 6 * window.devicePixelRatio, 0, Math.PI * 2);
+                ctx.fillStyle = '#00f0ff';
+                ctx.fill();
+                ctx.strokeStyle = '#ffffff';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+            }
+        }
+
+        // ==========================================
+        // 7. PERSISTENCE & SESSION MANAGEMENT
+        // ==========================================
+        function autoSaveActiveSession() {
+            const sessionData = {
+                state: state,
+                savedAt: Date.now()
+            };
+            localStorage.setItem('telemetry_active_session', JSON.stringify(sessionData));
+        }
+
+        function loadActiveSession() {
+            const raw = localStorage.getItem('telemetry_active_session');
+            if (!raw) return;
+
+            try {
+                const parsed = JSON.parse(raw);
+                if (parsed && parsed.state) {
+                    Object.assign(state, parsed.state);
+                    renderDashboard();
+                    renderAltitudeGraph();
+                    showToast("Restored active recording session");
+                }
+            } catch (e) {
+                console.error("Failed to restore session", e);
+            }
+        }
+
+        function saveAndStartNewTrip() {
+            // Save current trip to history archive
+            if (state.totalDistanceKm > 0.05 || state.altitudeHistory.length > 10) {
+                archiveCurrentTrip();
+            }
+
+            // Reset State for New Recording
+            state.startTime = Date.now();
+            state.totalDistanceKm = 0;
+            state.movingTimeSec = 0;
+            state.idleTimeSec = 0;
+            state.maxSpeedKmh = 0;
+            state.currentSpeedKmh = 0;
+            state.altitudeGain = 0;
+            state.altitudeHistory = [];
+            state.trackPoints = [];
+            state.minAltitude = state.currentAltitude || null;
+            state.maxAltitude = state.currentAltitude || null;
+
+            localStorage.removeItem('telemetry_active_session');
+            renderDashboard();
+            renderAltitudeGraph();
+
+            showToast("Trip saved! Started new recording.", "fa-floppy-disk");
+        }
+
+        function archiveCurrentTrip() {
+            const history = getHistoryArray();
+            const tripRecord = {
+                id: 'trip_' + Date.now(),
+                date: new Date().toISOString(),
+                distanceKm: state.totalDistanceKm,
+                movingTimeSec: state.movingTimeSec,
+                idleTimeSec: state.idleTimeSec,
+                maxSpeedKmh: state.maxSpeedKmh,
+                avgSpeedKmh: state.movingTimeSec > 0 ? (state.totalDistanceKm / (state.movingTimeSec / 3600)) : 0,
+                altitudeGain: state.altitudeGain,
+                trackPoints: state.trackPoints
+            };
+
+            history.unshift(tripRecord);
+            localStorage.setItem('telemetry_trip_history', JSON.stringify(history));
+        }
+
+        function getHistoryArray() {
+            const raw = localStorage.getItem('telemetry_trip_history');
+            if (!raw) return [];
+            try { return JSON.parse(raw); } catch (e) { return []; }
+        }
+
+        function renderHistoryList() {
+            const history = getHistoryArray();
+            ui.historyList.innerHTML = '';
+
+            if (history.length === 0) {
+                ui.historyList.innerHTML = `
+                    <div class="text-center py-8 text-slate-500 text-xs font-mono">
+                        No saved trip archives found.
+                    </div>
+                `;
+                return;
+            }
+
+            history.forEach(trip => {
+                const tripDate = new Date(trip.date).toLocaleString();
+                const card = document.createElement('div');
+                card.className = "bg-slate-950 border border-slate-800 rounded-lg p-3 flex flex-col md:flex-row justify-between items-start md:items-center gap-3";
+                card.innerHTML = `
+                    <div>
+                        <div class="text-xs font-bold text-brand-cyan">${tripDate}</div>
+                        <div class="flex items-center space-x-3 text-xs text-slate-300 mt-1">
+                            <span><b class="text-slate-100">${trip.distanceKm.toFixed(2)}</b> km</span>
+                            <span>•</span>
+                            <span>Time: <b class="text-slate-100">${formatDuration(trip.movingTimeSec)}</b></span>
+                            <span>•</span>
+                            <span>Avg: <b class="text-slate-100">${trip.avgSpeedKmh.toFixed(1)}</b> km/h</span>
+                            <span>•</span>
+                            <span>Gain: <b class="text-brand-green">+${trip.altitudeGain}m</b></span>
+                        </div>
+                    </div>
+                    <div class="flex items-center space-x-2 w-full md:w-auto justify-end">
+                        <button onclick="exportSingleTripGPX('${trip.id}')" class="bg-slate-800 hover:bg-slate-700 text-brand-cyan px-2.5 py-1.5 rounded text-xs font-bold flex items-center space-x-1">
+                            <i class="fa-solid fa-download"></i>
+                            <span>GPX</span>
+                        </button>
+                    </div>
+                `;
+                ui.historyList.appendChild(card);
             });
         }
 
-        function toggleRecord() {
-            isRecording = !isRecording;
-            const btn = document.getElementById('rec-btn');
-            if (isRecording) { btn.classList.add('active'); sessionData = []; }
-            else { btn.classList.remove('active'); if (sessionData.length > 0) exportGPX(); }
+        function clearAllHistory() {
+            if (confirm("Are you sure you want to delete all saved trip archives?")) {
+                localStorage.removeItem('telemetry_trip_history');
+                renderHistoryList();
+                showToast("Trip archives cleared");
+            }
         }
 
-        function exportGPX() {
-            let gpx = `<?xml version="1.0" encoding="UTF-8"?><gpx version="1.1" creator="ADV HUD" xmlns="http://www.topografix.com/GPX/1/1"><trk><name>Session</name><trkseg>`;
-            sessionData.forEach(p => { gpx += `<trkpt lat="${p.lat}" lon="${p.lon}"><ele>${p.alt || 0}</ele><time>${p.ts}</time><extensions><speed>${p.speed}</speed><roll>${p.roll}</roll><pitch>${p.pitch}</pitch></extensions></trkpt>`; });
-            gpx += `</trkseg></trk></gpx>`;
+        function togglePause() {
+            state.isPaused = !state.isPaused;
+            if (state.isPaused) {
+                ui.pauseIcon.className = "fa-solid fa-play text-brand-green";
+                ui.pauseText.textContent = "RESUME";
+                showToast("Recording Paused", "fa-pause");
+            } else {
+                ui.pauseIcon.className = "fa-solid fa-pause text-amber-400";
+                ui.pauseText.textContent = "PAUSE";
+                showToast("Recording Resumed", "fa-play");
+            }
+        }
+
+        // ==========================================
+        // 8. EXPORT & UTILITY FUNCTIONS
+        // ==========================================
+        function exportCurrentTripGPX() {
+            if (state.trackPoints.length === 0) {
+                showToast("No GPS trackpoints recorded yet", "fa-exclamation-triangle");
+                return;
+            }
+            generateGPXDownload(state.trackPoints, `Trip_${new Date().toISOString().slice(0,10)}.gpx`);
+        }
+
+        window.exportSingleTripGPX = function(tripId) {
+            const history = getHistoryArray();
+            const trip = history.find(t => t.id === tripId);
+            if (trip && trip.trackPoints) {
+                generateGPXDownload(trip.trackPoints, `${trip.id}.gpx`);
+            }
+        };
+
+        function generateGPXDownload(trackPoints, fileName) {
+            let gpx = `<?xml version="1.0" encoding="UTF-8"?>\n`;
+            gpx += `<gpx version="1.1" creator="Telemetry Dash" xmlns="http://www.topografix.com/GPX/1/1">\n`;
+            gpx += `  <trk>\n    <name>${fileName}</name>\n    <trkseg>\n`;
+
+            trackPoints.forEach(pt => {
+                const timeStr = new Date(pt.time).toISOString();
+                gpx += `      <trkpt lat="${pt.lat}" lon="${pt.lon}">\n`;
+                gpx += `        <ele>${pt.ele || 0}</ele>\n`;
+                gpx += `        <time>${timeStr}</time>\n`;
+                gpx += `      </trkpt>\n`;
+            });
+
+            gpx += `    </trkseg>\n  </trk>\n</gpx>`;
+
             const blob = new Blob([gpx], { type: 'application/gpx+xml' });
-            const url = URL.createObjectURL(blob), a = document.createElement('a');
-            a.href = url; a.download = `ADV_${new Date().getTime()}.gpx`;
-            document.body.appendChild(a); a.click(); document.body.removeChild(a);
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = fileName;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+
+            showToast("GPX File Exported Successfully!");
         }
 
-        function resetMax() { maxSpeed = 0; peakLean = 0; peakPitch = 0; document.getElementById('max-speed').textContent = "00"; document.getElementById('peak-lean').textContent = "0"; document.getElementById('peak-pitch').textContent = "0"; }
-        
-        if ("getBattery" in navigator) {
-            navigator.getBattery().then(batt => {
-                const update = () => { document.getElementById('batt').textContent = Math.round(batt.level * 100) + "%"; document.getElementById('batt-stat').textContent = batt.charging ? "⚡" : ""; };
-                update(); batt.onlevelchange = update; batt.onchargingchange = update;
-            });
+        function formatDuration(seconds) {
+            const h = Math.floor(seconds / 3600);
+            const m = Math.floor((seconds % 3600) / 60);
+            const s = Math.floor(seconds % 60);
+            const hh = h < 10 ? `0${h}` : h;
+            const mm = m < 10 ? `0${m}` : m;
+            const ss = s < 10 ? `0${s}` : s;
+            return `${hh}:${mm}:${ss}`;
         }
-        if ('serviceWorker' in navigator) { window.addEventListener('load', () => { navigator.serviceWorker.register('./sw.js'); }); }
+
+        function showToast(message, icon = "fa-check-circle") {
+            ui.toastMsg.textContent = message;
+            document.getElementById('toast-icon').className = `fa-solid ${icon}`;
+            ui.toast.classList.remove('translate-y-20', 'opacity-0');
+            setTimeout(() => {
+                ui.toast.classList.add('translate-y-20', 'opacity-0');
+            }, 3000);
+        }
     </script>
 </body>
 </html>
