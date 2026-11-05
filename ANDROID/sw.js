@@ -1,4 +1,4 @@
-const CACHE_NAME = 'adv-hud-v4';
+const CACHE_NAME = 'adv-hud-v5';
 const ASSETS = [
     './hud.html',
     './manifest.json'
