@@ -5,25 +5,25 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>ADV TACTICAL HUD</title>
     <link rel="manifest" href="manifest.json">
-    <meta name="theme-color" content="#00ff00">
+    <meta name="theme-color" content="#ffd700">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin=""/>
     <style>
         :root {
-            --neon-green: #00ff00;
-            --neon-green-glow: rgba(0, 255, 0, 0.3);
-            --bg-black: #050505;
-            --panel-bg: rgba(15, 15, 15, 0.9);
-            --alert-red: #ff3333;
+            --neon-yellow: #ffd700;
+            --neon-yellow-glow: rgba(255, 215, 0, 0.4);
+            --bg-black: #050508;
+            --panel-bg: #141418;
+            --alert-red: #ff5252;
         }
 
         body, html {
             margin: 0; padding: 0; height: 100dvh; width: 100%;
-            background-color: var(--bg-black); color: var(--neon-green);
+            background-color: var(--bg-black); color: var(--neon-yellow);
             font-family: 'JetBrains Mono', monospace; overflow: hidden;
-            text-transform: uppercase;
+            text-transform: uppercase; font-weight: bold;
         }
 
         #start-overlay {
@@ -33,118 +33,102 @@
             text-align: center;
         }
         #start-button {
-            background: transparent; border: 2px solid var(--neon-green);
-            color: var(--neon-green); padding: 20px 40px; font-family: inherit;
-            font-size: 1.5rem; cursor: pointer; box-shadow: 0 0 15px var(--neon-green-glow);
+            background: var(--neon-yellow); border: 3px solid #fff;
+            color: #000; padding: 30px 60px; font-family: inherit;
+            font-size: 2rem; font-weight: bold; cursor: pointer; box-shadow: 0 0 30px var(--neon-yellow-glow);
+            border-radius: 10px; text-transform: uppercase;
         }
 
         .hud-container {
             display: grid;
             grid-template-areas: 
-                "header header"
-                "speed speed"
-                "lean pitch"
-                "compass data"
-                "footer footer";
-            grid-template-rows: 50px 1.5fr 1fr 100px 40px;
-            grid-template-columns: 1fr 1fr;
+                "header"
+                "speed"
+                "lean"
+                "pitch"
+                "compass"
+                "data"
+                "footer";
+            grid-template-rows: 55px 2fr 1fr 1fr 1fr 1.2fr 40px;
+            grid-template-columns: 100%;
             height: 98dvh; width: 100vw; box-sizing: border-box;
-            padding: 10px; gap: 8px;
-            padding-left: max(10px, env(safe-area-inset-left));
-            padding-right: max(10px, env(safe-area-inset-right));
-            padding-top: max(10px, env(safe-area-inset-top));
-            padding-bottom: max(10px, env(safe-area-inset-bottom));
+            padding: 8px; gap: 8px; overflow-y: auto;
         }
-
-        body.landscape-mode .hud-container {
-            grid-template-areas: 
-                "header header header"
-                "speed lean pitch"
-                "speed compass data"
-                "footer footer footer";
-            grid-template-rows: 40px 1fr 1fr 30px;
-            grid-template-columns: 1.5fr 1fr 1fr;
-            padding: 5px; gap: 5px; height: 96dvh;
-        }
-
-        body.landscape-mode .speed-val { font-size: 5rem !important; }
-        body.landscape-mode .small-val { font-size: 1.6rem !important; }
 
         .hud-block {
-            background: var(--panel-bg); border: 1px solid var(--neon-green);
+            background: var(--panel-bg); border: 2px solid var(--neon-yellow);
             display: flex; flex-direction: column; align-items: center; justify-content: center;
-            box-shadow: inset 0 0 10px var(--neon-green-glow); border-radius: 4px;
-            position: relative; overflow: hidden;
+            box-shadow: 0 0 10px rgba(255, 215, 0, 0.2); border-radius: 8px;
+            position: relative; padding: 10px; min-height: 75px;
         }
 
         .hud-header { 
-            grid-area: header; font-size: 0.6rem; letter-spacing: 1px;
-            flex-direction: row; justify-content: space-between; padding: 0 10px;
+            grid-area: header; font-size: 0.75rem; letter-spacing: 1px;
+            flex-direction: row; justify-content: space-between; padding: 0 12px;
         }
-        .hud-footer { grid-area: footer; font-size: 0.6rem; color: #888; }
+        .hud-footer { grid-area: footer; font-size: 0.7rem; color: #fff; background: #111; border-color: #444; min-height: 35px; }
 
         .btn-action {
-            background: transparent; border: 1px solid var(--neon-green);
-            color: var(--neon-green); font-family: inherit; font-size: 0.55rem;
-            padding: 4px 6px; cursor: pointer; border-radius: 2px;
+            background: rgba(255, 215, 0, 0.2); border: 2px solid var(--neon-yellow);
+            color: var(--neon-yellow); font-family: inherit; font-size: 0.75rem; font-weight: bold;
+            padding: 8px 12px; cursor: pointer; border-radius: 6px;
         }
-        .btn-action:active { background: var(--neon-green); color: black; }
-        .btn-action.active { background: var(--neon-green); color: black; }
+        .btn-action:active, .btn-action.active { background: var(--neon-yellow); color: black; }
         
-        #rec-btn.active { border-color: var(--alert-red); color: var(--alert-red); animation: pulse 1s infinite; }
+        #rec-btn.active { border-color: var(--alert-red); color: var(--alert-red); background: rgba(255, 82, 82, 0.3); animation: pulse 1s infinite; }
 
         @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
 
-        .speed-area { grid-area: speed; }
-        .speed-val { font-size: 7rem; font-weight: bold; line-height: 1; text-shadow: 0 0 20px var(--neon-green-glow); }
-        .speed-unit { font-size: 1rem; opacity: 0.7; }
-        .max-speed-label { position: absolute; bottom: 5px; right: 8px; font-size: 0.5rem; color: #555; }
+        .speed-area { grid-area: speed; min-height: 140px; }
+        .speed-val { font-size: 6.5rem; font-weight: bold; line-height: 1; color: #fff; text-shadow: 0 0 20px var(--neon-yellow-glow); }
+        .speed-unit { font-size: 1.2rem; color: var(--neon-yellow); margin-top: 4px; }
+        .max-speed-label { position: absolute; bottom: 8px; right: 12px; font-size: 0.8rem; color: #fff; background: #000; padding: 2px 6px; border-radius: 4px; border: 1px solid var(--neon-yellow); }
 
-        #map { width: 100%; height: 100%; position: absolute; top: 0; left: 0; z-index: 10; display: none; background: #000; }
-        #mini-speed { position: absolute; top: 5px; left: 5px; z-index: 20; background: rgba(0,0,0,0.8); padding: 3px 6px; border: 1px solid var(--neon-green); font-weight: bold; font-size: 0.8rem; display: none; }
+        #map { width: 100%; height: 100%; position: absolute; top: 0; left: 0; z-index: 10; display: none; background: #000; border-radius: 6px; }
+        #mini-speed { position: absolute; top: 8px; left: 8px; z-index: 20; background: rgba(0,0,0,0.9); padding: 6px 12px; border: 2px solid var(--neon-yellow); font-weight: bold; font-size: 1.1rem; display: none; border-radius: 4px; color: #fff; }
 
         .lean-area { grid-area: lean; }
         .pitch-area { grid-area: pitch; }
         .compass-area { grid-area: compass; }
 
-        .small-val { font-size: 2.2rem; font-weight: bold; }
-        .small-label { font-size: 0.5rem; position: absolute; top: 3px; left: 8px; color: #888; }
-        .peak-label { position: absolute; bottom: 3px; right: 8px; font-size: 0.4rem; color: #444; }
+        .small-val { font-size: 2.2rem; font-weight: bold; color: #fff; }
+        .small-label { font-size: 0.7rem; position: absolute; top: 6px; left: 10px; color: var(--neon-yellow); letter-spacing: 1px; }
+        .peak-label { position: absolute; bottom: 6px; right: 10px; font-size: 0.7rem; color: #fff; background: #000; padding: 2px 6px; border-radius: 4px; border: 1px solid #555; }
 
-        .data-area { grid-area: data; display: grid; grid-template-columns: 1fr 1fr; gap: 3px; border: none; background: transparent; box-shadow: none; }
-        .data-item { background: var(--panel-bg); border: 1px solid #333; padding: 2px; border-radius: 4px; text-align: center; display: flex; flex-direction: column; justify-content: center; }
-        .data-val { font-size: 0.75rem; font-weight: bold; display: block; }
-        .data-label { font-size: 0.4rem; color: #666; }
+        .data-area { grid-area: data; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; border: none; background: transparent; box-shadow: none; padding: 0; min-height: unset; }
+        .data-item { background: var(--panel-bg); border: 2px solid var(--neon-yellow); padding: 8px; border-radius: 8px; text-align: center; display: flex; flex-direction: column; justify-content: center; }
+        .data-val { font-size: 1.1rem; font-weight: bold; display: block; color: #fff; }
+        .data-label { font-size: 0.6rem; color: var(--neon-yellow); margin-top: 2px; }
 
         #warning-overlay {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(255, 0, 0, 0.4); display: none; align-items: center; justify-content: center;
-            font-size: 1.2rem; font-weight: bold; color: white; z-index: 9999;
+            background: rgba(255, 0, 0, 0.6); display: none; align-items: center; justify-content: center;
+            font-size: 1.8rem; font-weight: bold; color: white; z-index: 9999;
             pointer-events: none; text-align: center;
         }
 
-        .visualizer-h { width: 70%; height: 3px; background: #222; margin-top: 5px; position: relative; }
-        .visualizer-v { height: 40%; width: 2px; background: #222; position: absolute; right: 8px; top: 30%; }
-        #lean-dot { width: 6px; height: 6px; background: var(--neon-green); border-radius: 50%; position: absolute; top: -2px; left: 50%; transform: translateX(-50%); transition: left 0.1s linear; }
-        #pitch-dot { width: 6px; height: 6px; background: var(--neon-green); border-radius: 50%; position: absolute; left: -2px; top: 50%; transform: translateY(-50%); transition: top 0.1s linear; }
+        .visualizer-h { width: 80%; height: 8px; background: #222; margin-top: 8px; position: relative; border-radius: 4px; border: 1px solid #444; }
+        .visualizer-v { height: 50%; width: 6px; background: #222; position: absolute; right: 15px; top: 25%; border-radius: 3px; border: 1px solid #444; }
+        #lean-dot { width: 14px; height: 14px; background: var(--neon-yellow); border-radius: 50%; position: absolute; top: -4px; left: 50%; transform: translateX(-50%); transition: left 0.1s linear; box-shadow: 0 0 10px var(--neon-yellow); border: 2px solid #fff; }
+        #pitch-dot { width: 14px; height: 14px; background: var(--neon-yellow); border-radius: 50%; position: absolute; left: -4px; top: 50%; transform: translateY(-50%); transition: top 0.1s linear; box-shadow: 0 0 10px var(--neon-yellow); border: 2px solid #fff; }
 
-        #g-meter { width: 20px; height: 20px; border: 1px solid #333; border-radius: 50%; position: absolute; top: 5px; right: 5px; overflow: hidden; z-index: 21; }
-        #g-ball { width: 3px; height: 3px; background: var(--neon-green); border-radius: 50%; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); }
+        #g-meter { width: 36px; height: 36px; border: 2px solid var(--neon-yellow); border-radius: 50%; position: absolute; top: 8px; right: 8px; overflow: hidden; z-index: 21; background: rgba(0,0,0,0.8); }
+        #g-ball { width: 8px; height: 8px; background: var(--neon-yellow); border-radius: 50%; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); box-shadow: 0 0 8px var(--neon-yellow); border: 1px solid #fff; }
     </style>
 </head>
 <body>
     <div id="start-overlay">
-        <h1 style="margin-bottom: 20px; letter-spacing: 5px;">SYSTEMS STANDBY</h1>
-        <button id="start-button" onclick="initializeSystems()">INITIALIZE HUD</button>
-        <p style="margin-top: 20px; font-size: 0.6rem; color: #555;">v3.9 // TOUCH TO START</p>
+        <h1 style="margin-bottom: 25px; letter-spacing: 3px; color: #fff; font-size: 1.8rem;">HUD READY</h1>
+        <button id="start-button" onclick="initializeSystems()">START HUD</button>
+        <p style="margin-top: 25px; font-size: 0.8rem; color: #aaa;">SINGLE COLUMN HIGH-VISIBILITY MODE</p>
     </div>
 
     <div id="warning-overlay">SENSORS OFFLINE</div>
 
     <div class="hud-container">
         <header class="hud-block hud-header">
-            <div>HUD v3.9 // <span id="lock-status" style="color:#555">WAKE LOCK: OFF</span></div>
-            <div style="display:flex; gap:4px">
+            <div>HUD v3.9 // <span id="lock-status" style="color:#aaa">WAKE: OFF</span></div>
+            <div style="display:flex; gap:6px">
                 <button class="btn-action" onclick="toggleFS()">FULL</button>
                 <button class="btn-action" id="map-btn" onclick="toggleMap()">MAP</button>
                 <button class="btn-action" onclick="calibrate()">CAL</button>
@@ -178,7 +162,7 @@
 
         <div class="hud-block compass-area">
             <span class="small-label">HEADING</span>
-            <div class="small-val" id="heading" style="font-size: 1.2rem;">---</div>
+            <div class="small-val" id="heading" style="font-size: 1.8rem;">---</div>
         </div>
 
         <div class="data-area">
@@ -218,16 +202,8 @@
         }
         setInterval(updateClock, 1000);
 
-        function updateOrientation() {
-            const isLandscape = window.innerWidth > window.innerHeight;
-            document.body.classList.toggle('landscape-mode', isLandscape);
-            if (map && isMapActive) { setTimeout(() => { map.invalidateSize(); if (marker) map.setView(marker.getLatLng()); }, 300); }
-        }
-        window.addEventListener('resize', updateOrientation);
-
         async function initializeSystems() {
             document.getElementById('start-overlay').style.display = 'none';
-            updateOrientation();
             if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
                 try {
                     const permission = await DeviceOrientationEvent.requestPermission();
@@ -242,8 +218,8 @@
             if ('wakeLock' in navigator) {
                 try {
                     wakeLock = await navigator.wakeLock.request('screen');
-                    document.getElementById('lock-status').textContent = "WAKE LOCK: ACTIVE";
-                    document.getElementById('lock-status').style.color = "var(--neon-green)";
+                    document.getElementById('lock-status').textContent = "WAKE: ON";
+                    document.getElementById('lock-status').style.color = "var(--neon-yellow)";
                 } catch (err) {}
             }
         }
@@ -262,7 +238,7 @@
                 if (!map) {
                     map = L.map('map', { zoomControl: false, attributionControl: false }).setView([0, 0], 15);
                     L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {}).addTo(map);
-                    marker = L.marker([0, 0], { icon: L.divIcon({ className: 'custom-div-icon', html: "<div style='background-color:var(--neon-green); width:8px; height:8px; border-radius:50%; border:1px solid white; box-shadow:0 0 8px var(--neon-green)'></div>", iconSize: [8, 8] }) }).addTo(map);
+                    marker = L.marker([0, 0], { icon: L.divIcon({ className: 'custom-div-icon', html: "<div style='background-color:var(--neon-yellow); width:14px; height:14px; border-radius:50%; border:2px solid white; box-shadow:0 0 12px var(--neon-yellow)'></div>", iconSize: [14, 14] }) }).addTo(map);
                 }
                 setTimeout(() => map.invalidateSize(), 200);
             } else { mapDiv.style.display = 'none'; miniSpeed.style.display = 'none'; mapBtn.classList.remove('active'); }
