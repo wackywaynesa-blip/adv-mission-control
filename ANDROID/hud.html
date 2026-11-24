@@ -1,297 +1,131 @@
-function updatePaceSplit(kmTarget, currentDist, pts, valElem, subElem, barElem) {
-            if (currentDist < 0.05 || pts.length < 2) {
-                valElem.textContent = "--:--";
-                barElem.style.width = "0%";
-                return;
-            }
-
-            const targetMeters = kmTarget * 1000;
-            let accumulatedMeters = 0;
-            let subPts = [pts[pts.length - 1]];
-
-            for (let i = pts.length - 1; i > 0; i--) {
-                const d = calculateHaversine(pts[i].lat, pts[i].lon, pts[i-1].lat, pts[i-1].lon) * 1000;
-                accumulatedMeters += d;
-                subPts.unshift(pts[i-1]);
-                if (accumulatedMeters >= targetMeters) break;
-            }
-
-            const progressPct = Math.min(100, (currentDist / kmTarget) * 100);
-            barElem.style.width = `${progressPct}%`;
-
-            if (accumulatedMeters < targetMeters * 0.85 && currentDist < kmTarget) {
-                valElem.textContent = "--:--";
-                return;
-            }
-
-            const timeSpanSec = (subPts[subPts.length - 1].time - subPts[0].time) / 1000;
-            const actualKm = accumulatedMeters / 1000;
-
-            if (timeSpanSec > 5 && actualKm > 0.05) {
-                const secPerKm = timeSpanSec / actualKm;
-                const mins = Math.floor(secPerKm / 60);
-                const secs = Math.floor(secPerKm % 60);
-                valElem.textContent = `${mins}:${secs < 10 ? '0' : ''}${secs}`;
-            } else {
-                valElem.textContent = "--:--";
-            }
-        }
-
-        function formatDuration(totalSec) {
-            const hrs = Math.floor(totalSec / 3600);
-            const mins = Math.floor((totalSec % 3600) / 60);
-            const secs = totalSec % 60;
-            return `${hrs < 10 ? '0' : ''}${hrs}:${mins < 10 ? '0' : ''}${mins}:${secs < 10 ? '0' : ''}${secs}`;
-        }
-
-        function initCanvas() {
-            resizeCanvas();
-        }
-
-        function resizeCanvas() {
-            const container = ui.canvas.parentElement;
-            ui.canvas.width = container.clientWidth;
-            ui.canvas.height = container.clientHeight;
-            renderAltitudeGraph();
-        }
-
-        function renderAltitudeGraph() {
-            const history = state.altitudeHistory;
-            ui.samplesCount.textContent = `Logged Samples: ${history.length}`;
-
-            if (history.length < 2) {
-                ui.emptyNotice.classList.remove('hidden');
-                ctx.clearRect(0, 0, ui.canvas.width, ui.canvas.height);
-                return;
-            }
-
-            ui.emptyNotice.classList.add('hidden');
-            const w = ui.canvas.width;
-            const h = ui.canvas.height;
-
-            ctx.clearRect(0, 0, w, h);
-
-            let minAlt = Infinity, maxAlt = -Infinity;
-            for (let pt of history) {
-                if (pt.alt < minAlt) minAlt = pt.alt;
-                if (pt.alt > maxAlt) maxAlt = pt.alt;
-            }
-
-            let altRange = maxAlt - minAlt;
-            if (altRange < 10) altRange = 10;
-
-            const padding = 20;
-            const drawH = h - (padding * 2);
-
-            ctx.beginPath();
-            ctx.strokeStyle = '#1e293b';
-            ctx.lineWidth = 1;
-            for (let i = 1; i <= 3; i++) {
-                let y = padding + (drawH / 4) * i;
-                ctx.moveTo(0, y);
-                ctx.lineTo(w, y);
-            }
-            ctx.stroke();
-
-            ctx.beginPath();
-            ctx.lineWidth = 2;
-            ctx.strokeStyle = '#ff6b00';
-
-            const gradient = ctx.createLinearGradient(0, 0, 0, h);
-            gradient.addColorStop(0, 'rgba(255, 107, 0, 0.3)');
-            gradient.addColorStop(1, 'rgba(255, 107, 0, 0.0)');
-
-            history.forEach((pt, index) => {
-                const x = (index / (history.length - 1)) * w;
-                const y = h - padding - ((pt.alt - minAlt) / altRange) * drawH;
-
-                if (index === 0) ctx.moveTo(x, y);
-                else ctx.lineTo(x, y);
-            });
-
-            ctx.stroke();
-
-            ctx.lineTo(w, h);
-            ctx.lineTo(0, h);
-            ctx.closePath();
-            ctx.fillStyle = gradient;
-            ctx.fill();
-        }
-
-        function togglePause() {
-            state.isPaused = !state.isPaused;
-            if (state.isPaused) {
-                ui.pauseIcon.className = "fa-solid fa-play text-brand-green";
-                ui.pauseText.textContent = "RESUME";
-                showToast("Telemetry session paused");
-            } else {
-                ui.pauseIcon.className = "fa-solid fa-pause text-amber-400";
-                ui.pauseText.textContent = "PAUSE";
-                showToast("Telemetry session resumed");
-            }
-        }
-
-        function saveAndStartNewTrip() {
-            if (state.trackPoints.length === 0) {
-                showToast("No telemetry data to save yet");
-                return;
-            }
-
-            const tripRecord = {
-                id: Date.now(),
-                date: new Date().toLocaleString(),
-                distanceKm: state.totalDistanceKm.toFixed(2),
-                movingTimeSec: state.movingTimeSec,
-                maxSpeedKmh: state.maxSpeedKmh.toFixed(1),
-                altGain: state.altitudeGain,
-                trackPoints: [...state.trackPoints]
-            };
-
-            let history = JSON.parse(localStorage.getItem('adv_trip_history') || '[]');
-            history.unshift(tripRecord);
-            if (history.length > 20) history.pop();
-            localStorage.setItem('adv_trip_history', JSON.stringify(history));
-
-            exportTripGPXRecord(tripRecord);
-
-            state.startTime = Date.now();
-            state.totalDistanceKm = 0;
-            state.movingTimeSec = 0;
-            state.idleTimeSec = 0;
-            state.maxSpeedKmh = 0;
-            state.currentSpeedKmh = 0;
-            state.currentAltitude = 0;
-            state.minAltitude = null;
-            state.maxAltitude = null;
-            state.altitudeGain = 0;
-            state.altitudeHistory = [];
-            state.trackPoints = [];
-            state.lastPosition = null;
-
-            showToast("Trip saved & new session started!");
-        }
-
-        function exportCurrentTripGPX() {
-            if (state.trackPoints.length === 0) {
-                showToast("No active track points to export");
-                return;
-            }
-
-            const tripRecord = {
-                id: Date.now(),
-                date: new Date().toISOString(),
-                distanceKm: state.totalDistanceKm.toFixed(2),
-                trackPoints: state.trackPoints
-            };
-
-            exportTripGPXRecord(tripRecord);
-        }
-
-        function exportTripGPXRecord(trip) {
-            let gpx = `<?xml version="1.0" encoding="UTF-8"?>\n`;
-            gpx += `<gpx version="1.1" creator="ADV Mission Control" xmlns="http://www.topografix.com/GPX/1/1">\n`;
-            gpx += `  <metadata>\n    <time>${new Date(trip.id).toISOString()}</time>\n  </metadata>\n`;
-            gpx += `  <trk>\n    <name>ADV Trip ${trip.date}</name>\n    <trkseg>\n`;
-
-            trip.trackPoints.forEach(pt => {
-                gpx += `      <trkpt lat="${pt.lat}" lon="${pt.lon}">\n`;
-                gpx += `        <ele>${pt.ele}</ele>\n`;
-                gpx += `        <time>${new Date(pt.time).toISOString()}</time>\n`;
-                gpx += `      </trkpt>\n`;
-            });
-
-            gpx += `    </trkseg>\n  </trk>\n</gpx>`;
-
-            const blob = new Blob([gpx], { type: 'application/gpx+xml' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `ADV_Trip_${trip.id}.gpx`;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            URL.revokeObjectURL(url);
-
-            showToast("GPX file downloaded successfully");
-        }
-
-        function autoSaveActiveSession() {
-            const sessionData = {
-                totalDistanceKm: state.totalDistanceKm,
-                movingTimeSec: state.movingTimeSec,
-                idleTimeSec: state.idleTimeSec,
-                maxSpeedKmh: state.maxSpeedKmh,
-                altitudeGain: state.altitudeGain,
-                trackPoints: state.trackPoints.slice(-500)
-            };
-            localStorage.setItem('adv_active_session', JSON.stringify(sessionData));
-        }
-
-        function loadActiveSession() {
-            const saved = localStorage.getItem('adv_active_session');
-            if (saved) {
-                try {
-                    const data = JSON.parse(saved);
-                    state.totalDistanceKm = data.totalDistanceKm || 0;
-                    state.movingTimeSec = data.movingTimeSec || 0;
-                    state.idleTimeSec = data.idleTimeSec || 0;
-                    state.maxSpeedKmh = data.maxSpeedKmh || 0;
-                    state.altitudeGain = data.altitudeGain || 0;
-                    if (data.trackPoints) state.trackPoints = data.trackPoints;
-                } catch(e) {}
-            }
-        }
-
-        function renderHistoryList() {
-            const history = JSON.parse(localStorage.getItem('adv_trip_history') || '[]');
-            ui.historyList.innerHTML = '';
-
-            if (history.length === 0) {
-                ui.historyList.innerHTML = `<div class="text-center text-slate-500 py-8">No saved trips found in local storage.</div>`;
-                return;
-            }
-
-            history.forEach(trip => {
-                const item = document.createElement('div');
-                item.className = "bg-slate-950 border border-slate-800 rounded-lg p-3 flex justify-between items-center";
-                item.innerHTML = `
-                    <div>
-                        <div class="font-bold text-slate-200 text-xs">${trip.date}</div>
-                        <div class="text-[10px] text-slate-400 mt-1 flex space-x-3">
-                            <span>Dist: <strong class="text-brand-cyan">${trip.distanceKm} km</strong></span>
-                            <span>Max Spd: <strong class="text-brand-orange">${trip.maxSpeedKmh} km/h</strong></span>
-                            <span>Gain: <strong class="text-brand-green">${trip.altGain} m</strong></span>
-                        </div>
-                    </div>
-                    <button onclick="exportTripGPXRecordById(${trip.id})" class="bg-slate-800 hover:bg-slate-700 text-brand-cyan px-3 py-1.5 rounded text-xs font-bold border border-slate-700">
-                        <i class="fa-solid fa-download mr-1"></i> GPX
-                    </button>
-                `;
-                ui.historyList.appendChild(item);
-            });
-        }
-
-        window.exportTripGPXRecordById = function(id) {
-            const history = JSON.parse(localStorage.getItem('adv_trip_history') || '[]');
-            const trip = history.find(t => t.id === id);
-            if (trip) exportTripGPXRecord(trip);
-        };
-
-        function clearAllHistory() {
-            if (confirm("Are you sure you want to clear all saved trip history?")) {
-                localStorage.removeItem('adv_trip_history');
-                renderHistoryList();
-                showToast("Trip history cleared");
-            }
-        }
-
-        function showToast(msg) {
-            ui.toastMsg.textContent = msg;
-            ui.toast.classList.remove('translate-y-20', 'opacity-0');
-            setTimeout(() => {
-                ui.toast.classList.add('translate-y-20', 'opacity-0');
-            }, 3000);
-        }
-    </script>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#0b1220">
+<title>Telemetry & Trip Dashboard v0.3</title>
+<style>
+:root{--bg:#050914;--panel:#101a2b;--panel2:#080e1d;--line:#35445b;--text:#edf3ff;--muted:#9aa9c1;--cyan:#00eaff;--green:#00ed73;--orange:#ff7417;--red:#ff365f}
+*{box-sizing:border-box}html,body{width:100%;height:100%;margin:0;overflow:hidden;background:var(--bg);color:var(--text);font-family:Arial,Helvetica,sans-serif;touch-action:manipulation;overscroll-behavior:none}
+body{height:100dvh}.app{height:100%;height:100dvh;display:grid;grid-template-rows:48px minmax(0,1fr) 58px;gap:5px;padding:5px;min-height:0}
+header{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:4px 10px;background:var(--panel);border:1px solid var(--line);border-radius:8px;min-width:0}
+.status{display:flex;align-items:center;gap:8px;min-width:0;font-weight:800;font-size:clamp(12px,1.7vw,19px);letter-spacing:.04em}.dot{width:12px;height:12px;border-radius:50%;background:var(--red);flex:none}.dot.locked{background:var(--green);box-shadow:0 0 10px var(--green)}.small{font-size:clamp(10px,1.2vw,14px);color:var(--muted);font-weight:700}.headright{display:flex;align-items:center;gap:7px}.headbutton{border:1px solid var(--line);background:var(--panel2);color:var(--text);border-radius:7px;padding:7px 10px;font-size:clamp(11px,1.3vw,15px);font-weight:800;min-height:34px}
+.workspace{display:grid;grid-template-columns:clamp(112px,16vw,190px) minmax(0,1fr);gap:6px;min-height:0;overflow:hidden}
+nav{display:grid;grid-template-rows:repeat(3,minmax(0,1fr));gap:5px;min-height:0;padding:5px;background:var(--panel);border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.tab{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;min-height:0;border:1px solid var(--line);border-radius:7px;background:var(--panel2);color:var(--text);font-weight:900;font-size:clamp(12px,1.65vw,19px);letter-spacing:.04em;padding:3px 2px}.tab .symbol{font-size:clamp(18px,2.7vw,30px);line-height:1}.tab.active{background:var(--cyan);color:#00131a;border-color:var(--cyan)}
+main{min-width:0;min-height:0;overflow:hidden;border:1px solid var(--line);border-radius:8px;background:var(--panel);padding:6px;display:grid;grid-template-rows:minmax(0,1fr);}
+.page{display:none;min-height:0;min-width:0;overflow:hidden}.page.active{display:grid;gap:6px;min-height:0}
+#page-avgs{grid-template-columns:repeat(2,minmax(0,1fr));grid-template-rows:repeat(2,minmax(0,1fr))}
+#page-splits{grid-template-columns:repeat(3,minmax(0,1fr));grid-template-rows:minmax(0,1fr) 62px}
+#page-alt{grid-template-rows:auto minmax(0,1fr) auto}
+.tile{background:var(--panel2);border:1px solid var(--line);border-radius:8px;display:flex;flex-direction:column;align-items:center;justify-content:center;min-width:0;min-height:0;padding:5px;text-align:center;overflow:hidden}
+.label{font-size:clamp(11px,1.7vw,19px);font-weight:900;color:var(--muted);letter-spacing:.04em;text-transform:uppercase;white-space:nowrap}.value{font-family:Consolas,monospace;font-size:clamp(30px,6vw,78px);font-weight:900;line-height:1.05;margin:5px 0;color:var(--text);white-space:nowrap}.value.cyan{color:var(--cyan);text-shadow:0 0 14px #00eaff66}.value.green{color:var(--green)}.unit{font-size:clamp(11px,1.7vw,19px);color:var(--muted);font-weight:700}.subvalue{font-size:clamp(10px,1.3vw,15px);color:var(--orange);font-weight:800;margin-top:2px}
+.split{position:relative}.split .value{font-size:clamp(25px,4.7vw,62px)}.progress{width:88%;height:6px;background:#25334a;border-radius:6px;margin-top:9px;overflow:hidden}.progress span{display:block;height:100%;width:0;background:var(--cyan)}.split:nth-child(2) .progress span{background:var(--orange)}.split:nth-child(3) .progress span{background:var(--green)}
+.statsrow{grid-column:1/-1;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;min-height:0}.mini{background:var(--panel2);border:1px solid var(--line);border-radius:7px;display:flex;align-items:center;justify-content:center;gap:7px;min-width:0;padding:4px}.mini strong{font-family:Consolas,monospace;font-size:clamp(14px,2.3vw,25px);white-space:nowrap}.mini span{font-size:clamp(9px,1.2vw,13px);color:var(--muted);font-weight:800}
+.altstats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:5px}.altstats .tile{padding:5px}.altstats .value{font-size:clamp(19px,3vw,36px);margin:3px 0}.graph{min-height:0;background:var(--panel2);border:1px solid var(--line);border-radius:8px;overflow:hidden;position:relative}.graph canvas{width:100%;height:100%;display:block}.graphnote{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#71809a;font-size:clamp(10px,1.4vw,15px);pointer-events:none}.graphfoot{display:flex;justify-content:space-between;color:var(--muted);font-size:clamp(10px,1.2vw,13px);font-weight:700;padding:0 4px}
+footer{display:grid;grid-template-columns:minmax(170px,2fr) repeat(2,minmax(95px,1fr));gap:6px;min-height:0}.action{border:1px solid var(--line);border-radius:8px;background:#17243a;color:var(--text);font-weight:900;font-size:clamp(11px,1.5vw,17px);padding:5px;min-width:0}.action.primary{background:var(--orange);color:#1a0c00;border-color:#ff9a4f}.action.pause{color:#ffe1a5}.action.export{color:var(--cyan)}
+.modal{position:fixed;inset:0;background:#000c;z-index:10;display:none;align-items:center;justify-content:center;padding:12px}.modal.open{display:flex}.dialog{width:min(760px,96vw);max-height:90dvh;overflow:hidden;background:var(--panel);border:1px solid var(--line);border-radius:10px;display:grid;grid-template-rows:auto minmax(0,1fr) auto}.dialoghead,.dialogfoot{padding:10px;background:var(--panel2);display:flex;align-items:center;justify-content:space-between;gap:8px}.dialoghead{font-weight:900;color:var(--cyan);font-size:clamp(13px,2vw,20px)}.dialogbody{padding:9px;overflow:hidden;min-height:0}.triprow{padding:9px;margin-bottom:7px;background:var(--panel2);border:1px solid var(--line);border-radius:7px;display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:clamp(11px,1.4vw,15px)}.tripinfo{min-width:0}.tripinfo b{color:var(--cyan)}.toast{position:fixed;left:50%;bottom:70px;transform:translate(-50%,20px);opacity:0;pointer-events:none;background:var(--cyan);color:#00131a;padding:9px 15px;border-radius:8px;font-size:13px;font-weight:900;z-index:20;transition:.2s;max-width:90vw;text-align:center}.toast.show{opacity:1;transform:translate(-50%,0)}
+@media(max-height:520px){.app{grid-template-rows:40px minmax(0,1fr) 48px;gap:4px;padding:4px}.workspace{gap:4px}nav{padding:3px;gap:3px}.tab{gap:2px}.tab .symbol{font-size:18px}.label{font-size:clamp(10px,1.5vw,15px)}.value{font-size:clamp(25px,5.4vw,58px)}.tile{padding:3px}footer{gap:4px}.action{padding:3px}}
+@media(max-width:520px){.workspace{grid-template-columns:88px minmax(0,1fr)}.status{font-size:11px}.small{font-size:9px}.headbutton{padding:5px 6px}.value{font-size:clamp(25px,7vw,48px)}.label{font-size:clamp(9px,2.4vw,13px)}.mini{flex-direction:column;gap:1px}.mini span{font-size:8px}}
+</style>
+</head>
+<body>
+<div class="app">
+<header>
+ <div class="status"><span id="gps-dot" class="dot"></span><span id="gps-text">SEARCHING GPS</span><span class="small">ACC <b id="gps-accuracy">--</b>m</span></div>
+ <div class="headright"><span class="small">HDG <b id="heading">--°</b></span><span class="small">BAT <b id="battery">--%</b></span><button class="headbutton" id="history-open">▣ HISTORY</button></div>
+</header>
+<div class="workspace">
+<nav aria-label="Dashboard views">
+ <button class="tab active" data-page="avgs"><span class="symbol">◉</span><span>AVGS</span></button>
+ <button class="tab" data-page="splits"><span class="symbol">◴</span><span>SPLITS</span></button>
+ <button class="tab" data-page="alt"><span class="symbol">▲</span><span>ALT</span></button>
+</nav>
+<main>
+ <section class="page active" id="page-avgs">
+  <div class="tile"><div class="label">Moving Average</div><div class="value cyan" id="moving-avg">0.0</div><div class="unit">km/h</div><div class="subvalue">MAX <span id="max-speed">0.0</span> km/h</div></div>
+  <div class="tile"><div class="label">Overall Average</div><div class="value" id="overall-avg">0.0</div><div class="unit">km/h</div><div class="subvalue">SINCE TRIP START</div></div>
+  <div class="tile"><div class="label">Total Distance</div><div class="value" id="total-distance">0.00</div><div class="unit">kilometers</div></div>
+  <div class="tile"><div class="label">Moving Time</div><div class="value green" id="moving-time">00:00:00</div><div class="unit">active time</div><div class="subvalue" style="color:#f7bd4b">IDLE <span id="idle-time">00:00:00</span></div></div>
+ </section>
+ <section class="page" id="page-splits">
+  <div class="tile split"><div class="label">Last 1 km</div><div class="value cyan" id="pace-1">--:--</div><div class="unit" id="pace-1-sub">min/km</div><div class="progress"><span id="bar-1"></span></div></div>
+  <div class="tile split"><div class="label">Last 5 km</div><div class="value" id="pace-5" style="color:var(--orange)">--:--</div><div class="unit" id="pace-5-sub">min/km</div><div class="progress"><span id="bar-5"></span></div></div>
+  <div class="tile split"><div class="label">Last 10 km</div><div class="value" id="pace-10" style="color:var(--green)">--:--</div><div class="unit" id="pace-10-sub">min/km</div><div class="progress"><span id="bar-10"></span></div></div>
+  <div class="statsrow"><div class="mini"><span>TOTAL</span><strong id="split-distance">0.00 km</strong></div><div class="mini"><span>MOVING</span><strong id="split-moving">00:00:00</strong></div><div class="mini"><span>OVERALL AVG</span><strong id="split-average">0.0 km/h</strong></div></div>
+ </section>
+ <section class="page" id="page-alt">
+  <div class="altstats"><div class="tile"><div class="label">Current</div><div class="value" id="alt-current" style="color:var(--orange)">0</div><div class="unit">metres</div></div><div class="tile"><div class="label">Minimum</div><div class="value" id="alt-min">0</div><div class="unit">metres</div></div><div class="tile"><div class="label">Maximum</div><div class="value" id="alt-max">0</div><div class="unit">metres</div></div><div class="tile"><div class="label">Gain</div><div class="value green" id="alt-gain">0</div><div class="unit">metres</div></div></div>
+  <div class="graph"><canvas id="altitude-canvas"></canvas><div class="graphnote" id="graph-note">Waiting for GPS elevation data</div></div>
+  <div class="graphfoot"><span id="sample-count">Samples: 0</span><span>ALTITUDE PROFILE</span></div>
+ </section>
+</main>
+</div>
+<footer>
+ <button class="action primary" id="save-new">▣ SAVE & START NEW TRIP</button>
+ <button class="action pause" id="pause-toggle">Ⅱ PAUSE</button>
+ <button class="action export" id="export-gpx">⇩ EXPORT GPX</button>
+</footer>
+</div>
+<div class="modal" id="history-modal"><div class="dialog"><div class="dialoghead"><span>SAVED TRIPS</span><button class="headbutton" id="history-close">CLOSE ✕</button></div><div class="dialogbody" id="history-list"></div><div class="dialogfoot"><button class="headbutton" id="clear-history">CLEAR HISTORY</button><span class="small">Saved on this device</span></div></div></div>
+<div class="toast" id="toast"></div>
+<script>
+'use strict';
+const STORE_ACTIVE='telemetry_active_session';
+const STORE_HISTORY='telemetry_trip_history';
+const state={isPaused:false,gpsLocked:false,lastPosition:null,startTime:Date.now(),totalDistanceKm:0,movingTimeSec:0,idleTimeSec:0,maxSpeedKmh:0,currentSpeedKmh:0,currentHeading:null,currentAltitude:0,minAltitude:null,maxAltitude:null,altitudeGain:0,altitudeHistory:[],trackPoints:[],lastLoopAt:Date.now(),lastAutoSave:Date.now(),lastGoodGpsAt:0};
+const $=id=>document.getElementById(id);
+let toastTimer=null,watchId=null;
+function toast(message){const el=$('toast');el.textContent=message;el.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>el.classList.remove('show'),2600)}
+function duration(sec){sec=Math.max(0,Math.floor(sec||0));const h=Math.floor(sec/3600),m=Math.floor(sec%3600/60),s=sec%60;return [h,m,s].map(v=>String(v).padStart(2,'0')).join(':')}
+function haversine(a,b){const R=6371,rad=Math.PI/180,dLat=(b.lat-a.lat)*rad,dLon=(b.lon-a.lon)*rad;const x=Math.sin(dLat/2)**2+Math.cos(a.lat*rad)*Math.cos(b.lat*rad)*Math.sin(dLon/2)**2;return 2*R*Math.atan2(Math.sqrt(x),Math.sqrt(1-x))}
+function cardinal(deg){if(deg==null||!Number.isFinite(deg))return '--';return ['N','NNE','NE','ENE','E','ESE','SE','SSE','S','SSW','SW','WSW','W','WNW','NW','NNW'][Math.round(deg/22.5)%16]}
+function setGps(locked,accuracy='--'){state.gpsLocked=locked;$('gps-dot').classList.toggle('locked',locked);$('gps-text').textContent=locked?'GPS LOCKED':'SEARCHING GPS';$('gps-accuracy').textContent=accuracy}
+function onPosition(pos){const c=pos.coords,stamp=Number(pos.timestamp)||Date.now();state.lastGoodGpsAt=Date.now();setGps(true,Math.round(c.accuracy||0));
+ if(c.heading!=null&&Number.isFinite(c.heading)){state.currentHeading=c.heading;$('heading').textContent=Math.round(c.heading)+'° '+cardinal(c.heading)}
+ state.currentSpeedKmh=c.speed!=null&&Number.isFinite(c.speed)?Math.max(0,c.speed*3.6):0;if(state.currentSpeedKmh>state.maxSpeedKmh)state.maxSpeedKmh=state.currentSpeedKmh;
+ if(c.altitude!=null&&Number.isFinite(c.altitude)){const alt=Math.round(c.altitude);if(state.minAltitude===null)state.minAltitude=alt;if(state.maxAltitude===null)state.maxAltitude=alt;if(alt<state.minAltitude)state.minAltitude=alt;if(alt>state.maxAltitude)state.maxAltitude=alt;if(state.currentAltitude!==0){const rise=alt-state.currentAltitude;if(rise>=3&&rise<=30)state.altitudeGain+=rise}state.currentAltitude=alt}
+ const point={lat:c.latitude,lon:c.longitude,ele:state.currentAltitude,speed:state.currentSpeedKmh,heading:state.currentHeading,dist:state.totalDistanceKm,time:stamp};
+ const accuracyGood=Number.isFinite(c.accuracy)&&c.accuracy<=35;
+ if(!state.isPaused&&accuracyGood&&Number.isFinite(c.latitude)&&Number.isFinite(c.longitude)){
+  const current={lat:c.latitude,lon:c.longitude,time:stamp};
+  if(state.lastPosition){const km=haversine(state.lastPosition,current),dt=Math.max(.25,(stamp-state.lastPosition.time)/1000),implied=km*3600/dt;
+   if(km>=.002&&km<=.25&&implied<=220){state.totalDistanceKm+=km;point.dist=state.totalDistanceKm;state.trackPoints.push(point);state.lastPosition=current}
+   else if(km<.002){/* Keep the old baseline so small movements accumulate instead of disappearing. */}
+   else {state.lastPosition=current;}
+  }else{state.trackPoints.push(point);state.lastPosition=current}
+ }
+ if(state.trackPoints.length>20000)state.trackPoints.splice(0,2000);
+}
+function onGpsError(){setGps(false);state.currentSpeedKmh=0}
+function initGps(){if(!navigator.geolocation){toast('This browser does not provide GPS');return}watchId=navigator.geolocation.watchPosition(onPosition,onGpsError,{enableHighAccuracy:true,maximumAge:1000,timeout:15000})}
+function tick(){const now=Date.now(),elapsed=Math.max(0,Math.min(10,(now-state.lastLoopAt)/1000));state.lastLoopAt=now;if(!state.isPaused){if(state.currentSpeedKmh>1.5)state.movingTimeSec+=elapsed;else state.idleTimeSec+=elapsed;state.altitudeHistory.push({time:now,alt:state.currentAltitude,dist:state.totalDistanceKm});if(state.altitudeHistory.length>3600)state.altitudeHistory.shift()}
+ if(now-state.lastGoodGpsAt>15000){setGps(false);state.currentSpeedKmh=0}
+ render();if(now-state.lastAutoSave>5000){saveActive();state.lastAutoSave=now}}
+function render(){const total=state.movingTimeSec+state.idleTimeSec,movingHours=state.movingTimeSec/3600,totalHours=total/3600,movingAvg=movingHours?state.totalDistanceKm/movingHours:0,overall=totalHours?state.totalDistanceKm/totalHours:0;
+ $('moving-avg').textContent=movingAvg.toFixed(1);$('overall-avg').textContent=overall.toFixed(1);$('total-distance').textContent=state.totalDistanceKm.toFixed(2);$('moving-time').textContent=duration(state.movingTimeSec);$('idle-time').textContent=duration(state.idleTimeSec);$('max-speed').textContent=state.maxSpeedKmh.toFixed(1);
+ $('alt-current').textContent=state.currentAltitude;$('alt-min').textContent=state.minAltitude??0;$('alt-max').textContent=state.maxAltitude??0;$('alt-gain').textContent=Math.round(state.altitudeGain);$('split-distance').textContent=state.totalDistanceKm.toFixed(2)+' km';$('split-moving').textContent=duration(state.movingTimeSec);$('split-average').textContent=overall.toFixed(1)+' km/h';renderPaces();drawGraph()}
+function interpolateTime(a,b,target){if(!a||!b||b.dist<=a.dist)return b?.time||Date.now();const f=Math.max(0,Math.min(1,(target-a.dist)/(b.dist-a.dist)));return a.time+(b.time-a.time)*f}
+function splitTime(target){const pts=state.trackPoints;if(state.totalDistanceKm<target||pts.length<2)return null;const boundary=state.totalDistanceKm-target;let before=null,after=null;for(let i=pts.length-1;i>=0;i--){if(pts[i].dist<=boundary){before=pts[i];after=pts[i+1]||pts[i];break}}if(!before)return null;const start=before.dist===boundary?before.time:interpolateTime(before,after,boundary);const end=pts[pts.length-1].time;return Math.max(1,(end-start)/1000)}
+function renderPaces(){[1,5,10].forEach(k=>{const secs=splitTime(k),progress=Math.min(1,state.totalDistanceKm/k);$('bar-'+k).style.width=(progress*100)+'%';if(!secs){$('pace-'+k).textContent='--:--';$('pace-'+k+'-sub').textContent=state.totalDistanceKm.toFixed(1)+' / '+k+' km';return}const pace=secs/60/k,min=Math.floor(pace),sec=Math.round((pace-min)*60);$('pace-'+k).textContent=min+':'+String(sec%60).padStart(2,'0');$('pace-'+k+'-sub').textContent='min/km'})}
+function resizeCanvas(){const canvas=$('altitude-canvas'),r=canvas.getBoundingClientRect(),dpr=Math.max(1,window.devicePixelRatio||1);canvas.width=Math.max(1,Math.floor(r.width*dpr));canvas.height=Math.max(1,Math.floor(r.height*dpr));drawGraph()}
+function drawGraph(){const canvas=$('altitude-canvas');if(!canvas)return;const ctx=canvas.getContext('2d'),w=canvas.width,h=canvas.height,data=state.altitudeHistory;$('sample-count').textContent='Samples: '+data.length;ctx.clearRect(0,0,w,h);if(data.length<2){$('graph-note').style.display='flex';return}$('graph-note').style.display='none';let min=Math.min(...data.map(p=>p.alt)),max=Math.max(...data.map(p=>p.alt));if(max-min<10){min-=5;max+=5}else{min-=3;max+=5}const range=max-min;ctx.strokeStyle='#26364d';ctx.lineWidth=1;for(let i=1;i<4;i++){ctx.beginPath();ctx.moveTo(0,h*i/4);ctx.lineTo(w,h*i/4);ctx.stroke()}ctx.beginPath();data.forEach((p,i)=>{const x=i/(data.length-1)*w,y=h-(p.alt-min)/range*h;if(i===0)ctx.moveTo(x,y);else ctx.lineTo(x,y)});ctx.lineWidth=Math.max(2,2*(window.devicePixelRatio||1));ctx.strokeStyle='#ff7417';ctx.stroke()}
+function saveActive(){try{const payload={state:{...state,lastPosition:null},savedAt:Date.now()};localStorage.setItem(STORE_ACTIVE,JSON.stringify(payload));return true}catch(e){toast('Storage full: trip not fully saved');return false}}
+function restoreActive(){try{const raw=localStorage.getItem(STORE_ACTIVE);if(!raw)return;const p=JSON.parse(raw);if(!p.state)return;Object.assign(state,p.state);state.lastPosition=null;state.lastLoopAt=Date.now();state.lastAutoSave=Date.now();state.isPaused=!!state.isPaused;toast('Previous trip restored')}catch(e){toast('Could not restore saved trip')}}
+function historyItems(){try{const x=JSON.parse(localStorage.getItem(STORE_HISTORY)||'[]');return Array.isArray(x)?x:[]}catch(e){return []}}
+function archiveTrip(){const list=historyItems();const rec={id:'trip_'+Date.now(),date:new Date().toISOString(),distanceKm:state.totalDistanceKm,movingTimeSec:state.movingTimeSec,idleTimeSec:state.idleTimeSec,maxSpeedKmh:state.maxSpeedKmh,avgSpeedKmh:state.movingTimeSec?state.totalDistanceKm/(state.movingTimeSec/3600):0,altitudeGain:state.altitudeGain,trackPoints:state.trackPoints};list.unshift(rec);while(list.length>30)list.pop();try{localStorage.setItem(STORE_HISTORY,JSON.stringify(list));return true}catch(e){toast('Archive storage is full');return false}}
+function saveNewTrip(){if(state.totalDistanceKm>.01||state.trackPoints.length>1){if(!archiveTrip())return}const alt=state.currentAltitude;Object.assign(state,{isPaused:false,lastPosition:null,startTime:Date.now(),totalDistanceKm:0,movingTimeSec:0,idleTimeSec:0,maxSpeedKmh:0,currentSpeedKmh:0,currentHeading:null,altitudeGain:0,altitudeHistory:[],trackPoints:[],minAltitude:alt||null,maxAltitude:alt||null,lastLoopAt:Date.now(),lastAutoSave:Date.now()});localStorage.removeItem(STORE_ACTIVE);$('pause-toggle').textContent='Ⅱ PAUSE';render();toast('Trip saved. New trip started.')}
+function exportGPX(points,name){if(!points||!points.length){toast('No GPS track recorded yet');return}const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&apos;'}[c]));let xml='<?xml version="1.0" encoding="UTF-8"?>\n<gpx version="1.1" creator="Telemetry Dashboard v0.3" xmlns="http://www.topografix.com/GPX/1/1"><trk><name>'+esc(name)+'</name><trkseg>';
+ for(const p of points){if(!Number.isFinite(p.lat)||!Number.isFinite(p.lon)||!Number.isFinite(p.time))continue;xml+='<trkpt lat="'+p.lat+'" lon="'+p.lon+'"><ele>'+(Number(p.ele)||0)+'</ele><time>'+new Date(p.time).toISOString()+'</time></trkpt>'}xml+='</trkseg></trk></gpx>';
+ const blob=new Blob([xml],{type:'application/gpx+xml'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1500);toast('GPX export started')}
+function renderHistory(){const host=$('history-list');host.replaceChildren();const list=historyItems();if(!list.length){const p=document.createElement('div');p.className='small';p.textContent='No saved trips yet.';host.appendChild(p);return}for(const trip of list.slice(0,5)){const row=document.createElement('div');row.className='triprow';const info=document.createElement('div');info.className='tripinfo';const date=document.createElement('b');date.textContent=new Date(trip.date).toLocaleString();const detail=document.createElement('div');detail.textContent=(Number(trip.distanceKm)||0).toFixed(2)+' km  |  Moving '+duration(trip.movingTimeSec)+'  |  Avg '+(Number(trip.avgSpeedKmh)||0).toFixed(1)+' km/h';info.append(date,detail);const btn=document.createElement('button');btn.className='headbutton';btn.textContent='GPX';btn.addEventListener('click',()=>exportGPX(trip.trackPoints,trip.id+'.gpx'));row.append(info,btn);host.appendChild(row)}if(list.length>5){const note=document.createElement('div');note.className='small';note.textContent='Showing the latest 5 trips. Older trips remain stored.';host.appendChild(note)}}
+function switchPage(name){document.querySelectorAll('.tab').forEach(b=>b.classList.toggle('active',b.dataset.page===name));document.querySelectorAll('.page').forEach(p=>p.classList.toggle('active',p.id==='page-'+name));if(name==='alt')requestAnimationFrame(resizeCanvas)}
+document.querySelectorAll('.tab').forEach(b=>b.addEventListener('click',()=>switchPage(b.dataset.page)));
+$('save-new').addEventListener('click',saveNewTrip);$('pause-toggle').addEventListener('click',()=>{state.isPaused=!state.isPaused;state.lastPosition=null;state.lastLoopAt=Date.now();$('pause-toggle').textContent=state.isPaused?'▶ RESUME':'Ⅱ PAUSE';saveActive();toast(state.isPaused?'Recording paused':'Recording resumed')});$('export-gpx').addEventListener('click',()=>exportGPX(state.trackPoints,'Trip_'+new Date().toISOString().slice(0,10)+'.gpx'));
+$('history-open').addEventListener('click',()=>{$('history-modal').classList.add('open');renderHistory()});$('history-close').addEventListener('click',()=>$('history-modal').classList.remove('open'));$('clear-history').addEventListener('click',()=>{if(confirm('Delete all saved trip history?')){localStorage.removeItem(STORE_HISTORY);renderHistory();toast('Trip history cleared')}});
+if('getBattery'in navigator){navigator.getBattery().then(b=>{const update=()=>{$('battery').textContent=Math.round(b.level*100)+'%'};update();b.addEventListener('levelchange',update)}).catch(()=>{$('battery').textContent='N/A'})}else{$('battery').textContent='N/A'}
+restoreActive();initGps();window.addEventListener('resize',resizeCanvas);setInterval(tick,500);requestAnimationFrame(resizeCanvas);render();
+</script>
 </body>
 </html>
