@@ -1,732 +1,131 @@
 <!DOCTYPE html>
-<html lang="en" class="h-full bg-slate-950 text-slate-100 dark">
+<html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Telemetry & Trip Dashboard</title>
-    <!-- Tailwind CSS CDN -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <!-- FontAwesome Icons -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <!-- Google Fonts -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:ital,wght@0,400;0,600;0,700;1,700&family=JetBrains+Mono:wght@400;600;700;800&display=swap" rel="stylesheet">
-    
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    colors: {
-                        brand: {
-                            cyan: '#00f0ff',
-                            orange: '#ff6b00',
-                            green: '#00ff66',
-                            red: '#ff0055',
-                            card: '#0f172a'
-                        }
-                    },
-                    fontFamily: {
-                        mono: ['"JetBrains Mono"', 'monospace'],
-                        display: ['"Chakra Petch"', 'sans-serif']
-                    }
-                }
-            }
-        }
-    </script>
-    <style>
-        ::-webkit-scrollbar { width: 4px; height: 4px; }
-        ::-webkit-scrollbar-track { background: #090d16; }
-        ::-webkit-scrollbar-thumb { background: #1e293b; border-radius: 2px; }
-        
-        body {
-            font-family: 'JetBrains Mono', monospace;
-            touch-action: manipulation;
-            user-select: none;
-        }
-        .glow-cyan { text-shadow: 0 0 12px rgba(0, 240, 255, 0.5); }
-        .glow-orange { text-shadow: 0 0 12px rgba(255, 107, 0, 0.5); }
-        .glow-green { text-shadow: 0 0 12px rgba(0, 255, 102, 0.5); }
-        .box-glow { box-shadow: 0 0 20px -5px rgba(0, 240, 255, 0.15); }
-        .box-glow-orange { box-shadow: 0 0 20px -5px rgba(255, 107, 0, 0.2); }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#0b1220">
+<title>Telemetry & Trip Dashboard v0.3</title>
+<style>
+:root{--bg:#050914;--panel:#101a2b;--panel2:#080e1d;--line:#35445b;--text:#edf3ff;--muted:#9aa9c1;--cyan:#00eaff;--green:#00ed73;--orange:#ff7417;--red:#ff365f}
+*{box-sizing:border-box}html,body{width:100%;height:100%;margin:0;overflow:hidden;background:var(--bg);color:var(--text);font-family:Arial,Helvetica,sans-serif;touch-action:manipulation;overscroll-behavior:none}
+body{height:100dvh}.app{height:100%;height:100dvh;display:grid;grid-template-rows:48px minmax(0,1fr) 58px;gap:5px;padding:5px;min-height:0}
+header{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:4px 10px;background:var(--panel);border:1px solid var(--line);border-radius:8px;min-width:0}
+.status{display:flex;align-items:center;gap:8px;min-width:0;font-weight:800;font-size:clamp(12px,1.7vw,19px);letter-spacing:.04em}.dot{width:12px;height:12px;border-radius:50%;background:var(--red);flex:none}.dot.locked{background:var(--green);box-shadow:0 0 10px var(--green)}.small{font-size:clamp(10px,1.2vw,14px);color:var(--muted);font-weight:700}.headright{display:flex;align-items:center;gap:7px}.headbutton{border:1px solid var(--line);background:var(--panel2);color:var(--text);border-radius:7px;padding:7px 10px;font-size:clamp(11px,1.3vw,15px);font-weight:800;min-height:34px}
+.workspace{display:grid;grid-template-columns:clamp(112px,16vw,190px) minmax(0,1fr);gap:6px;min-height:0;overflow:hidden}
+nav{display:grid;grid-template-rows:repeat(3,minmax(0,1fr));gap:5px;min-height:0;padding:5px;background:var(--panel);border:1px solid var(--line);border-radius:8px;overflow:hidden}
+.tab{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;min-height:0;border:1px solid var(--line);border-radius:7px;background:var(--panel2);color:var(--text);font-weight:900;font-size:clamp(12px,1.65vw,19px);letter-spacing:.04em;padding:3px 2px}.tab .symbol{font-size:clamp(18px,2.7vw,30px);line-height:1}.tab.active{background:var(--cyan);color:#00131a;border-color:var(--cyan)}
+main{min-width:0;min-height:0;overflow:hidden;border:1px solid var(--line);border-radius:8px;background:var(--panel);padding:6px;display:grid;grid-template-rows:minmax(0,1fr);}
+.page{display:none;min-height:0;min-width:0;overflow:hidden}.page.active{display:grid;gap:6px;min-height:0}
+#page-avgs{grid-template-columns:repeat(2,minmax(0,1fr));grid-template-rows:repeat(2,minmax(0,1fr))}
+#page-splits{grid-template-columns:repeat(3,minmax(0,1fr));grid-template-rows:minmax(0,1fr) 62px}
+#page-alt{grid-template-rows:auto minmax(0,1fr) auto}
+.tile{background:var(--panel2);border:1px solid var(--line);border-radius:8px;display:flex;flex-direction:column;align-items:center;justify-content:center;min-width:0;min-height:0;padding:5px;text-align:center;overflow:hidden}
+.label{font-size:clamp(11px,1.7vw,19px);font-weight:900;color:var(--muted);letter-spacing:.04em;text-transform:uppercase;white-space:nowrap}.value{font-family:Consolas,monospace;font-size:clamp(30px,6vw,78px);font-weight:900;line-height:1.05;margin:5px 0;color:var(--text);white-space:nowrap}.value.cyan{color:var(--cyan);text-shadow:0 0 14px #00eaff66}.value.green{color:var(--green)}.unit{font-size:clamp(11px,1.7vw,19px);color:var(--muted);font-weight:700}.subvalue{font-size:clamp(10px,1.3vw,15px);color:var(--orange);font-weight:800;margin-top:2px}
+.split{position:relative}.split .value{font-size:clamp(25px,4.7vw,62px)}.progress{width:88%;height:6px;background:#25334a;border-radius:6px;margin-top:9px;overflow:hidden}.progress span{display:block;height:100%;width:0;background:var(--cyan)}.split:nth-child(2) .progress span{background:var(--orange)}.split:nth-child(3) .progress span{background:var(--green)}
+.statsrow{grid-column:1/-1;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px;min-height:0}.mini{background:var(--panel2);border:1px solid var(--line);border-radius:7px;display:flex;align-items:center;justify-content:center;gap:7px;min-width:0;padding:4px}.mini strong{font-family:Consolas,monospace;font-size:clamp(14px,2.3vw,25px);white-space:nowrap}.mini span{font-size:clamp(9px,1.2vw,13px);color:var(--muted);font-weight:800}
+.altstats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:5px}.altstats .tile{padding:5px}.altstats .value{font-size:clamp(19px,3vw,36px);margin:3px 0}.graph{min-height:0;background:var(--panel2);border:1px solid var(--line);border-radius:8px;overflow:hidden;position:relative}.graph canvas{width:100%;height:100%;display:block}.graphnote{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#71809a;font-size:clamp(10px,1.4vw,15px);pointer-events:none}.graphfoot{display:flex;justify-content:space-between;color:var(--muted);font-size:clamp(10px,1.2vw,13px);font-weight:700;padding:0 4px}
+footer{display:grid;grid-template-columns:minmax(170px,2fr) repeat(2,minmax(95px,1fr));gap:6px;min-height:0}.action{border:1px solid var(--line);border-radius:8px;background:#17243a;color:var(--text);font-weight:900;font-size:clamp(11px,1.5vw,17px);padding:5px;min-width:0}.action.primary{background:var(--orange);color:#1a0c00;border-color:#ff9a4f}.action.pause{color:#ffe1a5}.action.export{color:var(--cyan)}
+.modal{position:fixed;inset:0;background:#000c;z-index:10;display:none;align-items:center;justify-content:center;padding:12px}.modal.open{display:flex}.dialog{width:min(760px,96vw);max-height:90dvh;overflow:hidden;background:var(--panel);border:1px solid var(--line);border-radius:10px;display:grid;grid-template-rows:auto minmax(0,1fr) auto}.dialoghead,.dialogfoot{padding:10px;background:var(--panel2);display:flex;align-items:center;justify-content:space-between;gap:8px}.dialoghead{font-weight:900;color:var(--cyan);font-size:clamp(13px,2vw,20px)}.dialogbody{padding:9px;overflow:hidden;min-height:0}.triprow{padding:9px;margin-bottom:7px;background:var(--panel2);border:1px solid var(--line);border-radius:7px;display:flex;align-items:center;justify-content:space-between;gap:8px;font-size:clamp(11px,1.4vw,15px)}.tripinfo{min-width:0}.tripinfo b{color:var(--cyan)}.toast{position:fixed;left:50%;bottom:70px;transform:translate(-50%,20px);opacity:0;pointer-events:none;background:var(--cyan);color:#00131a;padding:9px 15px;border-radius:8px;font-size:13px;font-weight:900;z-index:20;transition:.2s;max-width:90vw;text-align:center}.toast.show{opacity:1;transform:translate(-50%,0)}
+@media(max-height:520px){.app{grid-template-rows:40px minmax(0,1fr) 48px;gap:4px;padding:4px}.workspace{gap:4px}nav{padding:3px;gap:3px}.tab{gap:2px}.tab .symbol{font-size:18px}.label{font-size:clamp(10px,1.5vw,15px)}.value{font-size:clamp(25px,5.4vw,58px)}.tile{padding:3px}footer{gap:4px}.action{padding:3px}}
+@media(max-width:520px){.workspace{grid-template-columns:88px minmax(0,1fr)}.status{font-size:11px}.small{font-size:9px}.headbutton{padding:5px 6px}.value{font-size:clamp(25px,7vw,48px)}.label{font-size:clamp(9px,2.4vw,13px)}.mini{flex-direction:column;gap:1px}.mini span{font-size:8px}}
+</style>
 </head>
-<body class="h-full flex flex-col bg-slate-950 text-slate-100 overflow-hidden select-none">
-
-    <!-- TOP HEADER / STATUS BAR -->
-    <header class="bg-slate-900 border-b border-slate-800 px-4 py-2 flex justify-between items-center z-20 shrink-0">
-        <div class="flex items-center space-x-3">
-            <div class="flex items-center space-x-2 bg-slate-950 px-2.5 py-1 rounded-md border border-slate-800">
-                <div id="gps-status-dot" class="w-3 h-3 rounded-full bg-red-500 animate-pulse"></div>
-                <span id="gps-status-text" class="text-xs font-bold uppercase tracking-wider text-slate-400">Searching GPS</span>
-            </div>
-            <span class="text-xs font-mono text-slate-500">ACCURACY: <span id="gps-accuracy" class="text-slate-300">--</span> m</span>
-        </div>
-
-        <div class="flex items-center space-x-2 bg-slate-950 px-3 py-1 rounded-md border border-slate-800">
-            <i class="fa-solid fa-compass text-brand-cyan text-xs"></i>
-            <span class="text-xs font-bold text-slate-400">HDG:</span>
-            <span id="header-heading" class="text-xs font-bold text-brand-cyan">--° (---)</span>
-        </div>
-
-        <div class="flex items-center space-x-2">
-            <div class="flex items-center space-x-2 bg-slate-950 px-3 py-1 rounded-md border border-slate-800">
-                <i id="battery-icon" class="fa-solid fa-battery-half text-amber-400 text-sm"></i>
-                <span id="battery-level" class="text-xs font-bold text-slate-300">--%</span>
-                <i id="battery-charging" class="fa-solid fa-bolt text-brand-green text-xs hidden"></i>
-            </div>
-            <button id="btn-toggle-settings" title="Settings" class="bg-slate-800 hover:bg-slate-700 active:scale-95 text-slate-200 px-2.5 py-1 rounded-md border border-slate-700 text-xs font-bold flex items-center space-x-1 transition">
-                <i class="fa-solid fa-gear text-brand-cyan"></i>
-                <span class="hidden md:inline">SETTINGS</span>
-            </button>
-            <button id="btn-toggle-history" title="Trip History" class="bg-slate-800 hover:bg-slate-700 active:scale-95 text-slate-200 px-2.5 py-1 rounded-md border border-slate-700 text-xs font-bold flex items-center space-x-1 transition">
-                <i class="fa-solid fa-folder-open text-brand-orange"></i>
-                <span class="hidden md:inline">HISTORY</span>
-            </button>
-        </div>
-    </header>
-
-    <!-- MAIN DASHBOARD LAYOUT -->
-    <main class="flex-1 grid grid-cols-1 lg:grid-cols-12 gap-2 p-2 overflow-hidden bg-slate-950">
-        
-        <!-- LEFT COLUMN: Averages & Pace Meters (5 Cols) -->
-        <section class="lg:col-span-5 flex flex-col space-y-2 h-full">
-            
-            <div class="bg-slate-900 border border-slate-800 rounded-xl p-3 flex flex-col justify-between relative overflow-hidden box-glow">
-                <div class="flex justify-between items-start text-xs text-slate-400 font-semibold tracking-wider uppercase mb-2">
-                    <span><i class="fa-solid fa-gauge-high text-brand-cyan mr-1.5"></i> Trip Averages</span>
-                    <span class="text-slate-500">MAX SPD: <span id="val-max-speed" class="text-slate-200 font-bold">0.0</span> km/h</span>
-                </div>
-
-                <div class="grid grid-cols-2 gap-2 my-1">
-                    <div class="bg-slate-950/80 p-3 rounded-lg border border-slate-800 text-center flex flex-col justify-center">
-                        <div class="text-[10px] text-slate-400 uppercase font-semibold mb-1">Moving Avg</div>
-                        <div class="text-3xl sm:text-4xl font-display font-extrabold text-brand-cyan glow-cyan"><span id="val-moving-avg">0.0</span></div>
-                        <span class="text-[10px] text-slate-500 mt-0.5">km/h</span>
-                    </div>
-                    <div class="bg-slate-950/80 p-3 rounded-lg border border-slate-800 text-center flex flex-col justify-center">
-                        <div class="text-[10px] text-slate-400 uppercase font-semibold mb-1">Overall Avg</div>
-                        <div class="text-3xl sm:text-4xl font-display font-extrabold text-slate-100"><span id="val-overall-avg">0.0</span></div>
-                        <span class="text-[10px] text-slate-500 mt-0.5">km/h</span>
-                    </div>
-                </div>
-            </div>
-
-            <div class="bg-slate-900 border border-slate-800 rounded-xl p-3 flex-1 flex flex-col justify-between">
-                <div class="text-xs text-slate-400 font-semibold tracking-wider uppercase mb-2 flex justify-between items-center">
-                    <span><i class="fa-solid fa-stopwatch text-brand-orange mr-1.5"></i> Rolling Split Paces</span>
-                    <span class="text-[10px] text-slate-500">Recent Interval Averages</span>
-                </div>
-
-                <div class="grid grid-cols-3 gap-2 my-auto">
-                    <div class="bg-slate-950 p-2.5 rounded-lg border border-slate-800/80 flex flex-col justify-between text-center relative overflow-hidden">
-                        <div class="w-full bg-slate-800 h-1 absolute top-0 left-0">
-                            <div id="bar-1km-progress" class="bg-brand-cyan h-full w-0 transition-all"></div>
-                        </div>
-                        <span class="text-[11px] font-bold text-slate-400 mt-1">LAST 1 KM</span>
-                        <div id="pace-1km-value" class="text-xl sm:text-2xl font-bold font-display text-brand-cyan my-1">--:--</div>
-                        <span class="text-[10px] text-slate-500">min/km</span>
-                    </div>
-
-                    <div class="bg-slate-950 p-2.5 rounded-lg border border-slate-800/80 flex flex-col justify-between text-center relative overflow-hidden">
-                        <div class="w-full bg-slate-800 h-1 absolute top-0 left-0">
-                            <div id="bar-5km-progress" class="bg-brand-orange h-full w-0 transition-all"></div>
-                        </div>
-                        <span class="text-[11px] font-bold text-slate-400 mt-1">LAST 5 KM</span>
-                        <div id="pace-5km-value" class="text-xl sm:text-2xl font-bold font-display text-brand-orange my-1">--:--</div>
-                        <span class="text-[10px] text-slate-500">min/km</span>
-                    </div>
-
-                    <div class="bg-slate-950 p-2.5 rounded-lg border border-slate-800/80 flex flex-col justify-between text-center relative overflow-hidden">
-                        <div class="w-full bg-slate-800 h-1 absolute top-0 left-0">
-                            <div id="bar-10km-progress" class="bg-brand-green h-full w-0 transition-all"></div>
-                        </div>
-                        <span class="text-[11px] font-bold text-slate-400 mt-1">LAST 10 KM</span>
-                        <div id="pace-10km-value" class="text-xl sm:text-2xl font-bold font-display text-brand-green my-1">--:--</div>
-                        <span class="text-[10px] text-slate-500">min/km</span>
-                    </div>
-                </div>
-            </div>
-
-            <div class="grid grid-cols-3 gap-2">
-                <div class="bg-slate-900 border border-slate-800 rounded-lg p-2 text-center">
-                    <div class="text-[10px] text-slate-400 uppercase font-semibold">Total Distance</div>
-                    <div class="text-base font-bold text-slate-100 mt-0.5"><span id="val-total-dist">0.00</span> <span class="text-xs text-slate-500">km</span></div>
-                </div>
-                <div class="bg-slate-900 border border-slate-800 rounded-lg p-2 text-center">
-                    <div class="text-[10px] text-slate-400 uppercase font-semibold">Moving Time</div>
-                    <div id="val-moving-time" class="text-base font-bold text-brand-green mt-0.5">00:00:00</div>
-                </div>
-                <div class="bg-slate-900 border border-slate-800 rounded-lg p-2 text-center">
-                    <div class="text-[10px] text-slate-400 uppercase font-semibold">Stationary Time</div>
-                    <div id="val-idle-time" class="text-base font-bold text-amber-400 mt-0.5">00:00:00</div>
-                </div>
-            </div>
-
-        </section>
-
-        <!-- RIGHT COLUMN: Altitude Telemetry & Graphic Profile (7 Cols) -->
-        <section class="lg:col-span-7 flex flex-col space-y-2 h-full">
-            
-            <div class="bg-slate-900 border border-slate-800 rounded-xl p-3 flex-1 flex flex-col justify-between relative box-glow-orange min-h-[220px]">
-                
-                <div class="flex flex-wrap justify-between items-center gap-2 mb-2">
-                    <div class="flex items-center space-x-2">
-                        <i class="fa-solid fa-mountain text-brand-orange"></i>
-                        <span class="text-xs font-semibold text-slate-300 uppercase tracking-wider">Altitude Logging</span>
-                    </div>
-                    
-                    <div class="flex items-center space-x-3 text-xs">
-                        <div><span class="text-slate-500">CURR:</span> <span id="val-alt-curr" class="font-bold text-brand-orange">0</span> <span class="text-slate-500">m</span></div>
-                        <div><span class="text-slate-500">MIN:</span> <span id="val-alt-min" class="font-bold text-slate-300">0</span> <span class="text-slate-500">m</span></div>
-                        <div><span class="text-slate-500">MAX:</span> <span id="val-alt-max" class="font-bold text-slate-300">0</span> <span class="text-slate-500">m</span></div>
-                        <div><span class="text-slate-500">GAIN:</span> <span id="val-alt-gain" class="font-bold text-brand-green">0</span> <span class="text-slate-500">m</span></div>
-                    </div>
-                </div>
-
-                <div class="relative flex-1 w-full bg-slate-950 border border-slate-800/80 rounded-lg overflow-hidden my-1 min-h-[140px]">
-                    <canvas id="altitude-canvas" class="w-full h-full block"></canvas>
-                    <div id="graph-empty-notice" class="absolute inset-0 flex items-center justify-center text-slate-600 text-xs font-mono">
-                        Awaiting elevation data stream...
-                    </div>
-                </div>
-
-                <div class="flex justify-between items-center text-[10px] text-slate-500">
-                    <span id="graph-samples-count">Logged Samples: 0</span>
-                    <span class="flex items-center space-x-1">
-                        <span class="w-2 h-2 rounded-full bg-brand-orange inline-block"></span>
-                        <span>Altitude Profile</span>
-                    </span>
-                </div>
-            </div>
-
-            <!-- ACTION CONTROL BAR -->
-            <div class="bg-slate-900 border border-slate-800 rounded-xl p-2.5 flex flex-wrap gap-2 items-center justify-between">
-                <button id="btn-save-new" class="flex-1 min-w-[180px] bg-gradient-to-r from-brand-orange to-amber-600 hover:from-orange-500 hover:to-amber-500 text-slate-950 font-display font-extrabold text-sm py-2.5 px-4 rounded-lg shadow-lg active:scale-98 transition flex items-center justify-center space-x-2">
-                    <i class="fa-solid fa-floppy-disk text-base"></i>
-                    <span>SAVE & START NEW TRIP</span>
-                </button>
-
-                <div class="flex items-center space-x-2 w-full sm:w-auto">
-                    <button id="btn-pause-toggle" class="flex-1 sm:flex-none bg-slate-800 hover:bg-slate-700 text-slate-200 px-3 py-2.5 rounded-lg border border-slate-700 font-bold text-xs flex items-center justify-center space-x-1.5 transition">
-                        <i id="pause-icon" class="fa-solid fa-pause text-amber-400"></i>
-                        <span id="pause-text">PAUSE</span>
-                    </button>
-                    <button id="btn-export-gpx" class="flex-1 sm:flex-none bg-slate-800 hover:bg-slate-700 text-slate-200 px-3 py-2.5 rounded-lg border border-slate-700 font-bold text-xs flex items-center justify-center space-x-1.5 transition">
-                        <i class="fa-solid fa-file-export text-brand-cyan"></i>
-                        <span>EXPORT GPX</span>
-                    </button>
-                </div>
-            </div>
-
-        </section>
-    </main>
-
-    <!-- SETTINGS MODAL -->
-    <div id="modal-settings" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
-        <div class="bg-slate-900 border border-slate-800 rounded-xl max-w-md w-full flex flex-col shadow-2xl overflow-hidden">
-            <div class="p-4 border-b border-slate-800 flex justify-between items-center bg-slate-950">
-                <h3 class="font-display font-bold text-lg text-brand-cyan flex items-center space-x-2">
-                    <i class="fa-solid fa-gear"></i>
-                    <span>DASHBOARD SETTINGS</span>
-                </h3>
-                <button id="btn-close-settings" class="text-slate-400 hover:text-slate-100 p-1">
-                    <i class="fa-solid fa-xmark text-xl"></i>
-                </button>
-            </div>
-            <div class="p-4 space-y-4 text-xs">
-                <div>
-                    <label class="block text-slate-400 mb-1 font-bold">GPS High Accuracy Mode</label>
-                    <div class="text-slate-500">Enabled automatically for optimal motorcycle telemetry tracking.</div>
-                </div>
-            </div>
-            <div class="p-3 border-t border-slate-800 bg-slate-950 flex justify-end">
-                <button id="btn-save-settings" class="bg-brand-cyan text-slate-950 font-bold px-4 py-2 rounded-lg text-xs">CLOSE</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- HISTORY MODAL -->
-    <div id="modal-history" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
-        <div class="bg-slate-900 border border-slate-800 rounded-xl max-w-3xl w-full max-h-[85vh] flex flex-col shadow-2xl overflow-hidden">
-            <div class="p-4 border-b border-slate-800 flex justify-between items-center bg-slate-950">
-                <h3 class="font-display font-bold text-lg text-brand-cyan flex items-center space-x-2">
-                    <i class="fa-solid fa-clock-rotate-left"></i>
-                    <span>SAVED TRIP ARCHIVE & GPX EXPORT</span>
-                </h3>
-                <button id="btn-close-modal" class="text-slate-400 hover:text-slate-100 p-1">
-                    <i class="fa-solid fa-xmark text-xl"></i>
-                </button>
-            </div>
-            <div id="history-list" class="p-4 overflow-y-auto flex-1 space-y-3"></div>
-            <div class="p-3 border-t border-slate-800 bg-slate-950 flex justify-between items-center">
-                <button id="btn-clear-history" class="text-xs text-red-400 hover:text-red-300 font-bold">CLEAR ALL HISTORY</button>
-                <span class="text-[10px] text-slate-500">Stored locally on your browser</span>
-            </div>
-        </div>
-    </div>
-
-    <!-- NOTIFICATION TOAST -->
-    <div id="toast" class="fixed bottom-6 right-6 bg-brand-cyan text-slate-950 font-bold px-4 py-2.5 rounded-lg shadow-xl z-50 transform translate-y-20 opacity-0 transition-all duration-300 flex items-center space-x-2">
-        <i id="toast-icon" class="fa-solid fa-check-circle"></i>
-        <span id="toast-msg">Trip auto-saved successfully</span>
-    </div>
-
-    <script>
-        const state = {
-            isRecording: true,
-            isPaused: false,
-            gpsLocked: false,
-            lastPosition: null,
-            startTime: Date.now(),
-            totalDistanceKm: 0,
-            movingTimeSec: 0,
-            idleTimeSec: 0,
-            maxSpeedKmh: 0,
-            currentSpeedKmh: 0,
-            currentHeading: 0,
-            currentAltitude: 0,
-            minAltitude: null,
-            maxAltitude: null,
-            altitudeGain: 0,
-            altitudeHistory: [],
-            trackPoints: [],
-            lastAutoSave: Date.now()
-        };
-
-        const ui = {
-            gpsDot: document.getElementById('gps-status-dot'),
-            gpsText: document.getElementById('gps-status-text'),
-            gpsAccuracy: document.getElementById('gps-accuracy'),
-            headerHeading: document.getElementById('header-heading'),
-            batteryLevel: document.getElementById('battery-level'),
-            batteryIcon: document.getElementById('battery-icon'),
-            batteryCharging: document.getElementById('battery-charging'),
-            maxSpeed: document.getElementById('val-max-speed'),
-            movingAvg: document.getElementById('val-moving-avg'),
-            overallAvg: document.getElementById('val-overall-avg'),
-            totalDist: document.getElementById('val-total-dist'),
-            movingTime: document.getElementById('val-moving-time'),
-            idleTime: document.getElementById('val-idle-time'),
-            pace1kmVal: document.getElementById('pace-1km-value'),
-            bar1km: document.getElementById('bar-1km-progress'),
-            pace5kmVal: document.getElementById('pace-5km-value'),
-            bar5km: document.getElementById('bar-5km-progress'),
-            pace10kmVal: document.getElementById('pace-10km-value'),
-            bar10km: document.getElementById('bar-10km-progress'),
-            altCurr: document.getElementById('val-alt-curr'),
-            altMin: document.getElementById('val-alt-min'),
-            altMax: document.getElementById('val-alt-max'),
-            altGain: document.getElementById('val-alt-gain'),
-            samplesCount: document.getElementById('graph-samples-count'),
-            canvas: document.getElementById('altitude-canvas'),
-            emptyNotice: document.getElementById('graph-empty-notice'),
-            btnSaveNew: document.getElementById('btn-save-new'),
-            btnPause: document.getElementById('btn-pause-toggle'),
-            pauseIcon: document.getElementById('pause-icon'),
-            pauseText: document.getElementById('pause-text'),
-            btnExportGpx: document.getElementById('btn-export-gpx'),
-            btnToggleSettings: document.getElementById('btn-toggle-settings'),
-            modalSettings: document.getElementById('modal-settings'),
-            btnCloseSettings: document.getElementById('btn-close-settings'),
-            btnSaveSettings: document.getElementById('btn-save-settings'),
-            btnToggleHistory: document.getElementById('btn-toggle-history'),
-            modalHistory: document.getElementById('modal-history'),
-            btnCloseModal: document.getElementById('btn-close-modal'),
-            btnClearHistory: document.getElementById('btn-clear-history'),
-            historyList: document.getElementById('history-list'),
-            toast: document.getElementById('toast'),
-            toastMsg: document.getElementById('toast-msg')
-        };
-
-        const ctx = ui.canvas.getContext('2d');
-
-        window.addEventListener('DOMContentLoaded', () => {
-            initBattery();
-            initCanvas();
-            loadActiveSession();
-            initGPS();
-            
-            setInterval(masterTelemetryLoop, 1000);
-
-            ui.btnSaveNew.addEventListener('click', saveAndStartNewTrip);
-            ui.btnPause.addEventListener('click', togglePause);
-            ui.btnExportGpx.addEventListener('click', exportCurrentTripGPX);
-            
-            ui.btnToggleSettings.addEventListener('click', () => ui.modalSettings.classList.remove('hidden'));
-            ui.btnCloseSettings.addEventListener('click', () => ui.modalSettings.classList.add('hidden'));
-            ui.btnSaveSettings.addEventListener('click', () => ui.modalSettings.classList.add('hidden'));
-
-            ui.btnToggleHistory.addEventListener('click', () => { renderHistoryList(); ui.modalHistory.classList.remove('hidden'); });
-            ui.btnCloseModal.addEventListener('click', () => ui.modalHistory.classList.add('hidden'));
-            ui.btnClearHistory.addEventListener('click', clearAllHistory);
-            
-            window.addEventListener('resize', resizeCanvas);
-        });
-
-        function initBattery() {
-            if ('getBattery' in navigator) {
-                navigator.getBattery().then(battery => {
-                    function updateBattery() {
-                        const level = Math.round(battery.level * 100);
-                        ui.batteryLevel.textContent = `${level}%`;
-                        ui.batteryCharging.classList.toggle('hidden', !battery.charging);
-
-                        if (battery.level > 0.8) ui.batteryIcon.className = "fa-solid fa-battery-full text-brand-green text-sm";
-                        else if (battery.level > 0.4) ui.batteryIcon.className = "fa-solid fa-battery-half text-amber-400 text-sm";
-                        else ui.batteryIcon.className = "fa-solid fa-battery-quarter text-brand-red text-sm";
-                    }
-                    updateBattery();
-                    battery.addEventListener('levelchange', updateBattery);
-                    battery.addEventListener('chargingchange', updateBattery);
-                }).catch(() => { ui.batteryLevel.textContent = "N/A"; });
-            } else { ui.batteryLevel.textContent = "N/A"; }
-        }
-
-        function initGPS() {
-            if (!("geolocation" in navigator)) {
-                ui.gpsText.textContent = "GPS UNSUPPORTED";
-                showToast("Geolocation not supported");
-                return;
-            }
-            navigator.geolocation.watchPosition(onGPSPosition, onGPSError, { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 });
-        }
-
-        function getHeadingCardinal(deg) {
-            if (deg === null || isNaN(deg)) return "---";
-            const directions = ["N", "NNE", "NE", "ENE", "E", "ESE", "SE", "SSE", "S", "SSW", "SW", "WSW", "W", "WNW", "NW", "NNW"];
-            return directions[Math.floor((deg / 22.5) + 0.5) % 16];
-        }
-
-        function onGPSPosition(pos) {
-            if (state.isPaused) return;
-            const coords = pos.coords;
-            state.gpsLocked = true;
-            ui.gpsDot.className = "w-3 h-3 rounded-full bg-brand-green shadow-[0_0_8px_#00ff66]";
-            ui.gpsText.textContent = "GPS LOCKED";
-            ui.gpsAccuracy.textContent = Math.round(coords.accuracy);
-
-            if (coords.heading !== null && !isNaN(coords.heading)) {
-                state.currentHeading = coords.heading;
-                ui.headerHeading.textContent = `${Math.round(state.currentHeading)}° (${getHeadingCardinal(state.currentHeading)})`;
-            }
-
-            const timestamp = pos.timestamp || Date.now();
-            const rawSpeed = coords.speed !== null && !isNaN(coords.speed) ? coords.speed * 3.6 : 0;
-            state.currentSpeedKmh = rawSpeed > 0.8 ? rawSpeed : 0;
-            if (state.currentSpeedKmh > state.maxSpeedKmh) state.maxSpeedKmh = state.currentSpeedKmh;
-
-            if (coords.altitude !== null && !isNaN(coords.altitude)) {
-                const alt = Math.round(coords.altitude);
-                if (state.minAltitude === null || alt < state.minAltitude) state.minAltitude = alt;
-                if (state.maxAltitude === null || alt > state.maxAltitude) state.maxAltitude = alt;
-                if (state.currentAltitude !== 0 && alt > state.currentAltitude) {
-                    const diff = alt - state.currentAltitude;
-                    if (diff > 1 && diff < 50) state.altitudeGain += diff;
-                }
-                state.currentAltitude = alt;
-            }
-
-            if (state.lastPosition) {
-                const distDelta = calculateHaversine(state.lastPosition.lat, state.lastPosition.lon, coords.latitude, coords.longitude);
-                if (distDelta > 0.001 && distDelta < 0.5) state.totalDistanceKm += distDelta;
-            }
-
-            state.lastPosition = { lat: coords.latitude, lon: coords.longitude };
-            state.trackPoints.push({ lat: coords.latitude, lon: coords.longitude, ele: state.currentAltitude, speed: state.currentSpeedKmh, heading: state.currentHeading, dist: state.totalDistanceKm, time: timestamp });
-        }
-
-        function onGPSError(err) {
-            state.gpsLocked = false;
-            ui.gpsDot.className = "w-3 h-3 rounded-full bg-red-500 animate-pulse";
-            ui.gpsText.textContent = "GPS SEARCHING";
-            ui.gpsAccuracy.textContent = "--";
-        }
-
-        function calculateHaversine(lat1, lon1, lat2, lon2) {
-            const R = 6371;
-            const dLat = (lat2 - lat1) * Math.PI / 180;
-            const dLon = (lon2 - lon1) * Math.PI / 180;
-            const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) + Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLon / 2) * Math.sin(dLon / 2);
-            return R * (2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)));
-        }
-
-        function masterTelemetryLoop() {
-            if (state.isPaused) return;
-            if (state.currentSpeedKmh > 1.5) state.movingTimeSec++; else state.idleTimeSec++;
-
-            state.altitudeHistory.push({ time: Date.now(), alt: state.currentAltitude, dist: state.totalDistanceKm });
-            if (state.altitudeHistory.length > 7200) state.altitudeHistory.shift();
-
-            renderDashboard();
-            renderAltitudeGraph();
-
-            if (Date.now() - state.lastAutoSave > 5000) {
-                autoSaveActiveSession();
-                state.lastAutoSave = Date.now();
-            }
-        }
-
-        function renderDashboard() {
-            ui.maxSpeed.textContent = state.maxSpeedKmh.toFixed(1);
-            const totalTimeHours = (state.movingTimeSec + state.idleTimeSec) / 3600;
-            const movingTimeHours = state.movingTimeSec / 3600;
-
-            ui.movingAvg.textContent = (movingTimeHours > 0 ? (state.totalDistanceKm / movingTimeHours) : 0).toFixed(1);
-            ui.overallAvg.textContent = (totalTimeHours > 0 ? (state.totalDistanceKm / totalTimeHours) : 0).toFixed(1);
-            ui.totalDist.textContent = state.totalDistanceKm.toFixed(2);
-            ui.movingTime.textContent = formatDuration(state.movingTimeSec);
-            ui.idleTime.textContent = formatDuration(state.idleTimeSec);
-
-            ui.altCurr.textContent = state.currentAltitude;
-            ui.altMin.textContent = state.minAltitude !== null ? state.minAltitude : 0;
-            ui.altMax.textContent = state.maxAltitude !== null ? state.maxAltitude : 0;
-            ui.altGain.textContent = state.altitudeGain;
-
-            calculateRollingPaces();
-        }
-
-        function calculateRollingPaces() {
-            const currentDist = state.totalDistanceKm;
-            const pts = state.trackPoints;
-            updatePaceSplit(1, currentDist, pts, ui.pace1kmVal, ui.bar1km);
-            updatePaceSplit(5, currentDist, pts, ui.pace5kmVal, ui.bar5km);
-            updatePaceSplit(10, currentDist, pts, ui.pace10kmVal, ui.bar10km);
-        }
-
-        function updatePaceSplit(kmTarget, currentDist, pts, valElem, barElem) {
-            if (currentDist < 0.05 || pts.length < 2) {
-                valElem.textContent = "--:--";
-                barElem.style.width = "0%";
-                return;
-            }
-            const targetMeters = kmTarget * 1000;
-            let accumulatedMeters = 0;
-            let subPts = [pts[pts.length - 1]];
-
-            for (let i = pts.length - 1; i > 0; i--) {
-                const d = calculateHaversine(pts[i].lat, pts[i].lon, pts[i-1].lat, pts[i-1].lon) * 1000;
-                accumulatedMeters += d;
-                subPts.unshift(pts[i-1]);
-                if (accumulatedMeters >= targetMeters) break;
-            }
-
-            barElem.style.width = `${Math.min(100, (currentDist / kmTarget) * 100)}%`;
-            if (accumulatedMeters < targetMeters * 0.85 && currentDist < kmTarget) {
-                valElem.textContent = "--:--";
-                return;
-            }
-
-            const timeSpanSec = (subPts[subPts.length - 1].time - subPts[0].time) / 1000;
-            const actualKm = accumulatedMeters / 1000;
-
-            if (timeSpanSec > 5 && actualKm > 0.05) {
-                const secPerKm = timeSpanSec / actualKm;
-                valElem.textContent = `${Math.floor(secPerKm / 60)}:${Math.floor(secPerKm % 60).toString().padStart(2, '0')}`;
-            } else {
-                valElem.textContent = "--:--";
-            }
-        }
-
-        function formatDuration(totalSec) {
-            const hrs = Math.floor(totalSec / 3600);
-            const mins = Math.floor((totalSec % 3600) / 60);
-            const secs = totalSec % 60;
-            return `${hrs.toString().padStart(2, '0')}:${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
-        }
-
-        function initCanvas() { resizeCanvas(); }
-        function resizeCanvas() {
-            ui.canvas.width = ui.canvas.parentElement.clientWidth;
-            ui.canvas.height = ui.canvas.parentElement.clientHeight;
-            renderAltitudeGraph();
-        }
-
-        function renderAltitudeGraph() {
-            const history = state.altitudeHistory;
-            ui.samplesCount.textContent = `Logged Samples: ${history.length}`;
-            if (history.length < 2) {
-                ui.emptyNotice.classList.remove('hidden');
-                ctx.clearRect(0, 0, ui.canvas.width, ui.canvas.height);
-                return;
-            }
-            ui.emptyNotice.classList.add('hidden');
-            const w = ui.canvas.width, h = ui.canvas.height;
-            ctx.clearRect(0, 0, w, h);
-
-            let minAlt = Infinity, maxAlt = -Infinity;
-            for (let pt of history) {
-                if (pt.alt < minAlt) minAlt = pt.alt;
-                if (pt.alt > maxAlt) maxAlt = pt.alt;
-            }
-            let altRange = Math.max(maxAlt - minAlt, 10);
-            const padding = 20, drawH = h - (padding * 2);
-
-            ctx.beginPath();
-            ctx.strokeStyle = '#1e293b';
-            ctx.lineWidth = 1;
-            for (let i = 1; i <= 3; i++) {
-                let y = padding + (drawH / 4) * i;
-                ctx.moveTo(0, y); ctx.lineTo(w, y);
-            }
-            ctx.stroke();
-
-            ctx.beginPath();
-            ctx.lineWidth = 2;
-            ctx.strokeStyle = '#ff6b00';
-            const gradient = ctx.createLinearGradient(0, 0, 0, h);
-            gradient.addColorStop(0, 'rgba(255, 107, 0, 0.3)');
-            gradient.addColorStop(1, 'rgba(255, 107, 0, 0.0)');
-
-            history.forEach((pt, index) => {
-                const x = (index / (history.length - 1)) * w;
-                const y = h - padding - ((pt.alt - minAlt) / altRange) * drawH;
-                if (index === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
-            });
-            ctx.stroke();
-            ctx.lineTo(w, h); ctx.lineTo(0, h);
-            ctx.closePath();
-            ctx.fillStyle = gradient;
-            ctx.fill();
-        }
-
-        function togglePause() {
-            state.isPaused = !state.isPaused;
-            ui.pauseIcon.className = state.isPaused ? "fa-solid fa-play text-brand-green" : "fa-solid fa-pause text-amber-400";
-            ui.pauseText.textContent = state.isPaused ? "RESUME" : "PAUSE";
-            showToast(state.isPaused ? "Telemetry paused" : "Telemetry resumed");
-        }
-
-        function saveAndStartNewTrip() {
-            if (state.trackPoints.length === 0) {
-                showToast("No telemetry data to save");
-                return;
-            }
-            const tripRecord = {
-                id: Date.now(),
-                date: new Date().toLocaleString(),
-                distanceKm: state.totalDistanceKm.toFixed(2),
-                movingTimeSec: state.movingTimeSec,
-                maxSpeedKmh: state.maxSpeedKmh.toFixed(1),
-                altGain: state.altitudeGain,
-                trackPoints: [...state.trackPoints]
-            };
-            let history = JSON.parse(localStorage.getItem('adv_trip_history') || '[]');
-            history.unshift(tripRecord);
-            if (history.length > 20) history.pop();
-            localStorage.setItem('adv_trip_history', JSON.stringify(history));
-            exportTripGPXRecord(tripRecord);
-
-            state.startTime = Date.now();
-            state.totalDistanceKm = 0;
-            state.movingTimeSec = 0;
-            state.idleTimeSec = 0;
-            state.maxSpeedKmh = 0;
-            state.currentSpeedKmh = 0;
-            state.currentAltitude = 0;
-            state.minAltitude = null;
-            state.maxAltitude = null;
-            state.altitudeGain = 0;
-            state.altitudeHistory = [];
-            state.trackPoints = [];
-            state.lastPosition = null;
-            showToast("Trip saved & new session started!");
-        }
-
-        function exportCurrentTripGPX() {
-            if (state.trackPoints.length === 0) {
-                showToast("No active track points");
-                return;
-            }
-            exportTripGPXRecord({ id: Date.now(), date: new Date().toISOString(), trackPoints: state.trackPoints });
-        }
-
-        function exportTripGPXRecord(trip) {
-            let gpx = `<?xml version="1.0" encoding="UTF-8"?>\n<gpx version="1.1" creator="ADV Mission Control" xmlns="http://www.topografix.com/GPX/1/1">\n  <metadata>\n    <time>${new Date(trip.id).toISOString()}</time>\n  </metadata>\n  <trk>\n    <name>ADV Trip ${trip.date}</name>\n    <trkseg>\n`;
-            trip.trackPoints.forEach(pt => {
-                gpx += `      <trkpt lat="${pt.lat}" lon="${pt.lon}">\n        <ele>${pt.ele}</ele>\n        <time>${new Date(pt.time).toISOString()}</time>\n      </trkpt>\n`;
-            });
-            gpx += `    </trkseg>\n  </trk>\n</gpx>`;
-
-            const blob = new Blob([gpx], { type: 'application/gpx+xml' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `ADV_Trip_${trip.id}.gpx`;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            URL.revokeObjectURL(url);
-            showToast("GPX downloaded");
-        }
-
-        function autoSaveActiveSession() {
-            localStorage.setItem('adv_active_session', JSON.stringify({
-                totalDistanceKm: state.totalDistanceKm,
-                movingTimeSec: state.movingTimeSec,
-                idleTimeSec: state.idleTimeSec,
-                maxSpeedKmh: state.maxSpeedKmh,
-                altitudeGain: state.altitudeGain,
-                trackPoints: state.trackPoints.slice(-500)
-            }));
-        }
-
-        function loadActiveSession() {
-            const saved = localStorage.getItem('adv_active_session');
-            if (saved) {
-                try {
-                    const data = JSON.parse(saved);
-                    state.totalDistanceKm = data.totalDistanceKm || 0;
-                    state.movingTimeSec = data.movingTimeSec || 0;
-                    state.idleTimeSec = data.idleTimeSec || 0;
-                    state.maxSpeedKmh = data.maxSpeedKmh || 0;
-                    state.altitudeGain = data.altitudeGain || 0;
-                    if (data.trackPoints) state.trackPoints = data.trackPoints;
-                } catch(e) {}
-            }
-        }
-
-        function renderHistoryList() {
-            const history = JSON.parse(localStorage.getItem('adv_trip_history') || '[]');
-            ui.historyList.innerHTML = history.length === 0 ? `<div class="text-center text-slate-500 py-8">No saved trips found.</div>` : '';
-            history.forEach(trip => {
-                const item = document.createElement('div');
-                item.className = "bg-slate-950 border border-slate-800 rounded-lg p-3 flex justify-between items-center";
-                item.innerHTML = `
-                    <div>
-                        <div class="font-bold text-slate-200 text-xs">${trip.date}</div>
-                        <div class="text-[10px] text-slate-400 mt-1 flex space-x-3">
-                            <span>Dist: <strong class="text-brand-cyan">${trip.distanceKm} km</strong></span>
-                            <span>Max Spd: <strong class="text-brand-orange">${trip.maxSpeedKmh} km/h</strong></span>
-                            <span>Gain: <strong class="text-brand-green">${trip.altGain} m</strong></span>
-                        </div>
-                    </div>
-                    <button onclick="exportTripGPXRecordById(${trip.id})" class="bg-slate-800 hover:bg-slate-700 text-brand-cyan px-3 py-1.5 rounded text-xs font-bold border border-slate-700">
-                        <i class="fa-solid fa-download mr-1"></i> GPX
-                    </button>
-                `;
-                ui.historyList.appendChild(item);
-            });
-        }
-
-        window.exportTripGPXRecordById = function(id) {
-            const trip = JSON.parse(localStorage.getItem('adv_trip_history') || '[]').find(t => t.id === id);
-            if (trip) exportTripGPXRecord(trip);
-        };
-
-        function clearAllHistory() {
-            if (confirm("Clear all trip history?")) {
-                localStorage.removeItem('adv_trip_history');
-                renderHistoryList();
-                showToast("History cleared");
-            }
-        }
-
-        function showToast(msg) {
-            ui.toastMsg.textContent = msg;
-            ui.toast.classList.remove('translate-y-20', 'opacity-0');
-            setTimeout(() => ui.toast.classList.add('translate-y-20', 'opacity-0'), 3000);
-        }
-    </script>
+<body>
+<div class="app">
+<header>
+ <div class="status"><span id="gps-dot" class="dot"></span><span id="gps-text">SEARCHING GPS</span><span class="small">ACC <b id="gps-accuracy">--</b>m</span></div>
+ <div class="headright"><span class="small">HDG <b id="heading">--°</b></span><span class="small">BAT <b id="battery">--%</b></span><button class="headbutton" id="history-open">▣ HISTORY</button></div>
+</header>
+<div class="workspace">
+<nav aria-label="Dashboard views">
+ <button class="tab active" data-page="avgs"><span class="symbol">◉</span><span>AVGS</span></button>
+ <button class="tab" data-page="splits"><span class="symbol">◴</span><span>SPLITS</span></button>
+ <button class="tab" data-page="alt"><span class="symbol">▲</span><span>ALT</span></button>
+</nav>
+<main>
+ <section class="page active" id="page-avgs">
+  <div class="tile"><div class="label">Moving Average</div><div class="value cyan" id="moving-avg">0.0</div><div class="unit">km/h</div><div class="subvalue">MAX <span id="max-speed">0.0</span> km/h</div></div>
+  <div class="tile"><div class="label">Overall Average</div><div class="value" id="overall-avg">0.0</div><div class="unit">km/h</div><div class="subvalue">SINCE TRIP START</div></div>
+  <div class="tile"><div class="label">Total Distance</div><div class="value" id="total-distance">0.00</div><div class="unit">kilometers</div></div>
+  <div class="tile"><div class="label">Moving Time</div><div class="value green" id="moving-time">00:00:00</div><div class="unit">active time</div><div class="subvalue" style="color:#f7bd4b">IDLE <span id="idle-time">00:00:00</span></div></div>
+ </section>
+ <section class="page" id="page-splits">
+  <div class="tile split"><div class="label">Last 1 km</div><div class="value cyan" id="pace-1">--:--</div><div class="unit" id="pace-1-sub">min/km</div><div class="progress"><span id="bar-1"></span></div></div>
+  <div class="tile split"><div class="label">Last 5 km</div><div class="value" id="pace-5" style="color:var(--orange)">--:--</div><div class="unit" id="pace-5-sub">min/km</div><div class="progress"><span id="bar-5"></span></div></div>
+  <div class="tile split"><div class="label">Last 10 km</div><div class="value" id="pace-10" style="color:var(--green)">--:--</div><div class="unit" id="pace-10-sub">min/km</div><div class="progress"><span id="bar-10"></span></div></div>
+  <div class="statsrow"><div class="mini"><span>TOTAL</span><strong id="split-distance">0.00 km</strong></div><div class="mini"><span>MOVING</span><strong id="split-moving">00:00:00</strong></div><div class="mini"><span>OVERALL AVG</span><strong id="split-average">0.0 km/h</strong></div></div>
+ </section>
+ <section class="page" id="page-alt">
+  <div class="altstats"><div class="tile"><div class="label">Current</div><div class="value" id="alt-current" style="color:var(--orange)">0</div><div class="unit">metres</div></div><div class="tile"><div class="label">Minimum</div><div class="value" id="alt-min">0</div><div class="unit">metres</div></div><div class="tile"><div class="label">Maximum</div><div class="value" id="alt-max">0</div><div class="unit">metres</div></div><div class="tile"><div class="label">Gain</div><div class="value green" id="alt-gain">0</div><div class="unit">metres</div></div></div>
+  <div class="graph"><canvas id="altitude-canvas"></canvas><div class="graphnote" id="graph-note">Waiting for GPS elevation data</div></div>
+  <div class="graphfoot"><span id="sample-count">Samples: 0</span><span>ALTITUDE PROFILE</span></div>
+ </section>
+</main>
+</div>
+<footer>
+ <button class="action primary" id="save-new">▣ SAVE & START NEW TRIP</button>
+ <button class="action pause" id="pause-toggle">Ⅱ PAUSE</button>
+ <button class="action export" id="export-gpx">⇩ EXPORT GPX</button>
+</footer>
+</div>
+<div class="modal" id="history-modal"><div class="dialog"><div class="dialoghead"><span>SAVED TRIPS</span><button class="headbutton" id="history-close">CLOSE ✕</button></div><div class="dialogbody" id="history-list"></div><div class="dialogfoot"><button class="headbutton" id="clear-history">CLEAR HISTORY</button><span class="small">Saved on this device</span></div></div></div>
+<div class="toast" id="toast"></div>
+<script>
+'use strict';
+const STORE_ACTIVE='telemetry_active_session';
+const STORE_HISTORY='telemetry_trip_history';
+const state={isPaused:false,gpsLocked:false,lastPosition:null,startTime:Date.now(),totalDistanceKm:0,movingTimeSec:0,idleTimeSec:0,maxSpeedKmh:0,currentSpeedKmh:0,currentHeading:null,currentAltitude:0,minAltitude:null,maxAltitude:null,altitudeGain:0,altitudeHistory:[],trackPoints:[],lastLoopAt:Date.now(),lastAutoSave:Date.now(),lastGoodGpsAt:0};
+const $=id=>document.getElementById(id);
+let toastTimer=null,watchId=null;
+function toast(message){const el=$('toast');el.textContent=message;el.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>el.classList.remove('show'),2600)}
+function duration(sec){sec=Math.max(0,Math.floor(sec||0));const h=Math.floor(sec/3600),m=Math.floor(sec%3600/60),s=sec%60;return [h,m,s].map(v=>String(v).padStart(2,'0')).join(':')}
+function haversine(a,b){const R=6371,rad=Math.PI/180,dLat=(b.lat-a.lat)*rad,dLon=(b.lon-a.lon)*rad;const x=Math.sin(dLat/2)**2+Math.cos(a.lat*rad)*Math.cos(b.lat*rad)*Math.sin(dLon/2)**2;return 2*R*Math.atan2(Math.sqrt(x),Math.sqrt(1-x))}
+function cardinal(deg){if(deg==null||!Number.isFinite(deg))return '--';return ['N','NNE','NE','ENE','E','ESE','SE','SSE','S','SSW','SW','WSW','W','WNW','NW','NNW'][Math.round(deg/22.5)%16]}
+function setGps(locked,accuracy='--'){state.gpsLocked=locked;$('gps-dot').classList.toggle('locked',locked);$('gps-text').textContent=locked?'GPS LOCKED':'SEARCHING GPS';$('gps-accuracy').textContent=accuracy}
+function onPosition(pos){const c=pos.coords,stamp=Number(pos.timestamp)||Date.now();state.lastGoodGpsAt=Date.now();setGps(true,Math.round(c.accuracy||0));
+ if(c.heading!=null&&Number.isFinite(c.heading)){state.currentHeading=c.heading;$('heading').textContent=Math.round(c.heading)+'° '+cardinal(c.heading)}
+ state.currentSpeedKmh=c.speed!=null&&Number.isFinite(c.speed)?Math.max(0,c.speed*3.6):0;if(state.currentSpeedKmh>state.maxSpeedKmh)state.maxSpeedKmh=state.currentSpeedKmh;
+ if(c.altitude!=null&&Number.isFinite(c.altitude)){const alt=Math.round(c.altitude);if(state.minAltitude===null)state.minAltitude=alt;if(state.maxAltitude===null)state.maxAltitude=alt;if(alt<state.minAltitude)state.minAltitude=alt;if(alt>state.maxAltitude)state.maxAltitude=alt;if(state.currentAltitude!==0){const rise=alt-state.currentAltitude;if(rise>=3&&rise<=30)state.altitudeGain+=rise}state.currentAltitude=alt}
+ const point={lat:c.latitude,lon:c.longitude,ele:state.currentAltitude,speed:state.currentSpeedKmh,heading:state.currentHeading,dist:state.totalDistanceKm,time:stamp};
+ const accuracyGood=Number.isFinite(c.accuracy)&&c.accuracy<=35;
+ if(!state.isPaused&&accuracyGood&&Number.isFinite(c.latitude)&&Number.isFinite(c.longitude)){
+  const current={lat:c.latitude,lon:c.longitude,time:stamp};
+  if(state.lastPosition){const km=haversine(state.lastPosition,current),dt=Math.max(.25,(stamp-state.lastPosition.time)/1000),implied=km*3600/dt;
+   if(km>=.002&&km<=.25&&implied<=220){state.totalDistanceKm+=km;point.dist=state.totalDistanceKm;state.trackPoints.push(point);state.lastPosition=current}
+   else if(km<.002){/* Keep the old baseline so small movements accumulate instead of disappearing. */}
+   else {state.lastPosition=current;}
+  }else{state.trackPoints.push(point);state.lastPosition=current}
+ }
+ if(state.trackPoints.length>20000)state.trackPoints.splice(0,2000);
+}
+function onGpsError(){setGps(false);state.currentSpeedKmh=0}
+function initGps(){if(!navigator.geolocation){toast('This browser does not provide GPS');return}watchId=navigator.geolocation.watchPosition(onPosition,onGpsError,{enableHighAccuracy:true,maximumAge:1000,timeout:15000})}
+function tick(){const now=Date.now(),elapsed=Math.max(0,Math.min(10,(now-state.lastLoopAt)/1000));state.lastLoopAt=now;if(!state.isPaused){if(state.currentSpeedKmh>1.5)state.movingTimeSec+=elapsed;else state.idleTimeSec+=elapsed;state.altitudeHistory.push({time:now,alt:state.currentAltitude,dist:state.totalDistanceKm});if(state.altitudeHistory.length>3600)state.altitudeHistory.shift()}
+ if(now-state.lastGoodGpsAt>15000){setGps(false);state.currentSpeedKmh=0}
+ render();if(now-state.lastAutoSave>5000){saveActive();state.lastAutoSave=now}}
+function render(){const total=state.movingTimeSec+state.idleTimeSec,movingHours=state.movingTimeSec/3600,totalHours=total/3600,movingAvg=movingHours?state.totalDistanceKm/movingHours:0,overall=totalHours?state.totalDistanceKm/totalHours:0;
+ $('moving-avg').textContent=movingAvg.toFixed(1);$('overall-avg').textContent=overall.toFixed(1);$('total-distance').textContent=state.totalDistanceKm.toFixed(2);$('moving-time').textContent=duration(state.movingTimeSec);$('idle-time').textContent=duration(state.idleTimeSec);$('max-speed').textContent=state.maxSpeedKmh.toFixed(1);
+ $('alt-current').textContent=state.currentAltitude;$('alt-min').textContent=state.minAltitude??0;$('alt-max').textContent=state.maxAltitude??0;$('alt-gain').textContent=Math.round(state.altitudeGain);$('split-distance').textContent=state.totalDistanceKm.toFixed(2)+' km';$('split-moving').textContent=duration(state.movingTimeSec);$('split-average').textContent=overall.toFixed(1)+' km/h';renderPaces();drawGraph()}
+function interpolateTime(a,b,target){if(!a||!b||b.dist<=a.dist)return b?.time||Date.now();const f=Math.max(0,Math.min(1,(target-a.dist)/(b.dist-a.dist)));return a.time+(b.time-a.time)*f}
+function splitTime(target){const pts=state.trackPoints;if(state.totalDistanceKm<target||pts.length<2)return null;const boundary=state.totalDistanceKm-target;let before=null,after=null;for(let i=pts.length-1;i>=0;i--){if(pts[i].dist<=boundary){before=pts[i];after=pts[i+1]||pts[i];break}}if(!before)return null;const start=before.dist===boundary?before.time:interpolateTime(before,after,boundary);const end=pts[pts.length-1].time;return Math.max(1,(end-start)/1000)}
+function renderPaces(){[1,5,10].forEach(k=>{const secs=splitTime(k),progress=Math.min(1,state.totalDistanceKm/k);$('bar-'+k).style.width=(progress*100)+'%';if(!secs){$('pace-'+k).textContent='--:--';$('pace-'+k+'-sub').textContent=state.totalDistanceKm.toFixed(1)+' / '+k+' km';return}const pace=secs/60/k,min=Math.floor(pace),sec=Math.round((pace-min)*60);$('pace-'+k).textContent=min+':'+String(sec%60).padStart(2,'0');$('pace-'+k+'-sub').textContent='min/km'})}
+function resizeCanvas(){const canvas=$('altitude-canvas'),r=canvas.getBoundingClientRect(),dpr=Math.max(1,window.devicePixelRatio||1);canvas.width=Math.max(1,Math.floor(r.width*dpr));canvas.height=Math.max(1,Math.floor(r.height*dpr));drawGraph()}
+function drawGraph(){const canvas=$('altitude-canvas');if(!canvas)return;const ctx=canvas.getContext('2d'),w=canvas.width,h=canvas.height,data=state.altitudeHistory;$('sample-count').textContent='Samples: '+data.length;ctx.clearRect(0,0,w,h);if(data.length<2){$('graph-note').style.display='flex';return}$('graph-note').style.display='none';let min=Math.min(...data.map(p=>p.alt)),max=Math.max(...data.map(p=>p.alt));if(max-min<10){min-=5;max+=5}else{min-=3;max+=5}const range=max-min;ctx.strokeStyle='#26364d';ctx.lineWidth=1;for(let i=1;i<4;i++){ctx.beginPath();ctx.moveTo(0,h*i/4);ctx.lineTo(w,h*i/4);ctx.stroke()}ctx.beginPath();data.forEach((p,i)=>{const x=i/(data.length-1)*w,y=h-(p.alt-min)/range*h;if(i===0)ctx.moveTo(x,y);else ctx.lineTo(x,y)});ctx.lineWidth=Math.max(2,2*(window.devicePixelRatio||1));ctx.strokeStyle='#ff7417';ctx.stroke()}
+function saveActive(){try{const payload={state:{...state,lastPosition:null},savedAt:Date.now()};localStorage.setItem(STORE_ACTIVE,JSON.stringify(payload));return true}catch(e){toast('Storage full: trip not fully saved');return false}}
+function restoreActive(){try{const raw=localStorage.getItem(STORE_ACTIVE);if(!raw)return;const p=JSON.parse(raw);if(!p.state)return;Object.assign(state,p.state);state.lastPosition=null;state.lastLoopAt=Date.now();state.lastAutoSave=Date.now();state.isPaused=!!state.isPaused;toast('Previous trip restored')}catch(e){toast('Could not restore saved trip')}}
+function historyItems(){try{const x=JSON.parse(localStorage.getItem(STORE_HISTORY)||'[]');return Array.isArray(x)?x:[]}catch(e){return []}}
+function archiveTrip(){const list=historyItems();const rec={id:'trip_'+Date.now(),date:new Date().toISOString(),distanceKm:state.totalDistanceKm,movingTimeSec:state.movingTimeSec,idleTimeSec:state.idleTimeSec,maxSpeedKmh:state.maxSpeedKmh,avgSpeedKmh:state.movingTimeSec?state.totalDistanceKm/(state.movingTimeSec/3600):0,altitudeGain:state.altitudeGain,trackPoints:state.trackPoints};list.unshift(rec);while(list.length>30)list.pop();try{localStorage.setItem(STORE_HISTORY,JSON.stringify(list));return true}catch(e){toast('Archive storage is full');return false}}
+function saveNewTrip(){if(state.totalDistanceKm>.01||state.trackPoints.length>1){if(!archiveTrip())return}const alt=state.currentAltitude;Object.assign(state,{isPaused:false,lastPosition:null,startTime:Date.now(),totalDistanceKm:0,movingTimeSec:0,idleTimeSec:0,maxSpeedKmh:0,currentSpeedKmh:0,currentHeading:null,altitudeGain:0,altitudeHistory:[],trackPoints:[],minAltitude:alt||null,maxAltitude:alt||null,lastLoopAt:Date.now(),lastAutoSave:Date.now()});localStorage.removeItem(STORE_ACTIVE);$('pause-toggle').textContent='Ⅱ PAUSE';render();toast('Trip saved. New trip started.')}
+function exportGPX(points,name){if(!points||!points.length){toast('No GPS track recorded yet');return}const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&apos;'}[c]));let xml='<?xml version="1.0" encoding="UTF-8"?>\n<gpx version="1.1" creator="Telemetry Dashboard v0.3" xmlns="http://www.topografix.com/GPX/1/1"><trk><name>'+esc(name)+'</name><trkseg>';
+ for(const p of points){if(!Number.isFinite(p.lat)||!Number.isFinite(p.lon)||!Number.isFinite(p.time))continue;xml+='<trkpt lat="'+p.lat+'" lon="'+p.lon+'"><ele>'+(Number(p.ele)||0)+'</ele><time>'+new Date(p.time).toISOString()+'</time></trkpt>'}xml+='</trkseg></trk></gpx>';
+ const blob=new Blob([xml],{type:'application/gpx+xml'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1500);toast('GPX export started')}
+function renderHistory(){const host=$('history-list');host.replaceChildren();const list=historyItems();if(!list.length){const p=document.createElement('div');p.className='small';p.textContent='No saved trips yet.';host.appendChild(p);return}for(const trip of list.slice(0,5)){const row=document.createElement('div');row.className='triprow';const info=document.createElement('div');info.className='tripinfo';const date=document.createElement('b');date.textContent=new Date(trip.date).toLocaleString();const detail=document.createElement('div');detail.textContent=(Number(trip.distanceKm)||0).toFixed(2)+' km  |  Moving '+duration(trip.movingTimeSec)+'  |  Avg '+(Number(trip.avgSpeedKmh)||0).toFixed(1)+' km/h';info.append(date,detail);const btn=document.createElement('button');btn.className='headbutton';btn.textContent='GPX';btn.addEventListener('click',()=>exportGPX(trip.trackPoints,trip.id+'.gpx'));row.append(info,btn);host.appendChild(row)}if(list.length>5){const note=document.createElement('div');note.className='small';note.textContent='Showing the latest 5 trips. Older trips remain stored.';host.appendChild(note)}}
+function switchPage(name){document.querySelectorAll('.tab').forEach(b=>b.classList.toggle('active',b.dataset.page===name));document.querySelectorAll('.page').forEach(p=>p.classList.toggle('active',p.id==='page-'+name));if(name==='alt')requestAnimationFrame(resizeCanvas)}
+document.querySelectorAll('.tab').forEach(b=>b.addEventListener('click',()=>switchPage(b.dataset.page)));
+$('save-new').addEventListener('click',saveNewTrip);$('pause-toggle').addEventListener('click',()=>{state.isPaused=!state.isPaused;state.lastPosition=null;state.lastLoopAt=Date.now();$('pause-toggle').textContent=state.isPaused?'▶ RESUME':'Ⅱ PAUSE';saveActive();toast(state.isPaused?'Recording paused':'Recording resumed')});$('export-gpx').addEventListener('click',()=>exportGPX(state.trackPoints,'Trip_'+new Date().toISOString().slice(0,10)+'.gpx'));
+$('history-open').addEventListener('click',()=>{$('history-modal').classList.add('open');renderHistory()});$('history-close').addEventListener('click',()=>$('history-modal').classList.remove('open'));$('clear-history').addEventListener('click',()=>{if(confirm('Delete all saved trip history?')){localStorage.removeItem(STORE_HISTORY);renderHistory();toast('Trip history cleared')}});
+if('getBattery'in navigator){navigator.getBattery().then(b=>{const update=()=>{$('battery').textContent=Math.round(b.level*100)+'%'};update();b.addEventListener('levelchange',update)}).catch(()=>{$('battery').textContent='N/A'})}else{$('battery').textContent='N/A'}
+restoreActive();initGps();window.addEventListener('resize',resizeCanvas);setInterval(tick,500);requestAnimationFrame(resizeCanvas);render();
+</script>
 </body>
 </html>
